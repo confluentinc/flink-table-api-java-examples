@@ -22,14 +22,15 @@ public class Example_02_UnboundedTables {
         // Statements can be finite (i.e. bounded) or infinite (i.e. unbounded).
         // If one of the accessed input tables is unbounded, the statement is unbounded.
 
-        System.out.println("Running bounded statement...");
+        System.out.println("Running bounded statements for listing...");
 
         // Catalog operations (such as show/list queries) are always finite
         env.executeSql("SHOW TABLES").print();
         Stream.of(env.listTables()).forEach(System.out::println);
 
+        System.out.println("Running bounded statement from values...");
+
         // Pipelines derived from finite tables (such as fromValues) are bounded as well
-        System.out.println("Running bounded statement...");
         env.fromValues("Bob", "Alice", "Peter")
                 .as("name")
                 .filter($("name").like("%e%"))

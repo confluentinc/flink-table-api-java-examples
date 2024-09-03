@@ -25,7 +25,7 @@ import java.util.concurrent.ExecutionException;
  * below with target catalog/database if this is fine for you.
  *
  * <p>ALSO NOTE: The example submits an unbounded background statement. Make sure to stop the
- * statement in the Web UI afterward to clean up resource.
+ * statement in the Web UI afterward to clean up resources.
  */
 public class Example_05_TablePipelines {
 
@@ -69,9 +69,6 @@ public class Example_05_TablePipelines {
                                         .build())
                         .distributedInto(1)
                         .build());
-
-        // Temporary workaround: Wait until the tables are created
-        Thread.sleep(5_000);
 
         System.out.println("Executing table pipeline synchronous...");
 

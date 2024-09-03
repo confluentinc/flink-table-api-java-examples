@@ -44,8 +44,8 @@ public class Example_07_Changelogs {
         Table customers = env.from("customers");
 
         // Use ConfluentTools to visualise either the changelog or materialized in-memory table.
-        // The 'customers' table is unbounded by default, but the tool allows to stop after 100
-        // events for debugging
+        // The 'customers' table is unbounded by default, but the tool allows to stop consuming
+        // after 100 events for debugging
         System.out.println("Print a capped changelog...");
         ConfluentTools.printChangelog(customers, 100);
         System.out.println("Print a table of the capped and applied changelog...");

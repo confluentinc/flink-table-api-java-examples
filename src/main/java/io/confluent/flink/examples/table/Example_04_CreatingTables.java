@@ -36,6 +36,8 @@ public class Example_04_CreatingTables {
         env.useCatalog(TARGET_CATALOG);
         env.useDatabase(TARGET_DATABASE);
 
+        System.out.println("Creating table... " + TARGET_TABLE1);
+
         // Create a table programmatically:
         // The table...
         //   - is backed by an equally named Kafka topic
@@ -65,12 +67,15 @@ public class Example_04_CreatingTables {
                         + "  `user_id` STRING,\n"
                         + "  `name` STRING,\n"
                         + "  `email` STRING\n"
-                        + ") DISTRIBUTED BY HASH(`user_id`) INTO 4 BUCKETS\n"
+                        + ")\n"
+                        + "DISTRIBUTED BY HASH(`user_id`) INTO 4 BUCKETS\n"
                         + "WITH (\n"
                         + "  'kafka.retention.time' = '0 ms',\n"
                         + "  'key.format' = 'json-registry',\n"
                         + "  'value.format' = 'json-registry'\n"
                         + ")");
+
+        System.out.println("Creating table... " + TARGET_TABLE2);
 
         // The schema builders can be quite useful to avoid manual schema work. You can adopt schema
         // from other tables, massage the schema, and/or add additional columns
