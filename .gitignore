@@ -1,0 +1,7 @@
+.idea
+target/
+*.iml
+.java-version
+*.DS_Store
+cloud.properties
+dependency-reduced-pom.xml
