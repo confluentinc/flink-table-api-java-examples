@@ -102,7 +102,8 @@ Change the current directory.
 cd flink-table-api-java-examples
 ```
 
-Use Maven to build a JAR file of the project. The included Maven wrapper `mvnw` is useful for a consistent Maven version.
+Use Maven to build a JAR file of the project. Make sure you have at least Java 11 installed.
+The included Maven wrapper `mvnw` is useful for a consistent Maven version, you don't need to install Maven. 
 ```bash
 ./mvnw clean package
 ```
