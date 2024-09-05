@@ -1,9 +1,9 @@
 package io.confluent.flink.examples.table;
 
+import io.confluent.flink.plugin.ConfluentSettings;
+
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.TableEnvironment;
-
-import io.confluent.flink.plugin.ConfluentSettings;
 
 import java.util.stream.Stream;
 

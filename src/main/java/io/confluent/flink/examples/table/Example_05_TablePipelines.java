@@ -1,9 +1,5 @@
 package io.confluent.flink.examples.table;
 
-import static org.apache.flink.table.api.Expressions.$;
-import static org.apache.flink.table.api.Expressions.concat;
-import static org.apache.flink.table.api.Expressions.row;
-
 import io.confluent.flink.plugin.ConfluentSettings;
 import io.confluent.flink.plugin.ConfluentTableDescriptor;
 
@@ -17,6 +13,10 @@ import org.apache.flink.table.api.TablePipeline;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+
+import static org.apache.flink.table.api.Expressions.$;
+import static org.apache.flink.table.api.Expressions.concat;
+import static org.apache.flink.table.api.Expressions.row;
 
 /**
  * A table program example that demos how to pipe data into a table or multiple tables.
