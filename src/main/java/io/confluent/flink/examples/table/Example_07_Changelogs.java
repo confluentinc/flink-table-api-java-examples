@@ -1,11 +1,11 @@
 package io.confluent.flink.examples.table;
 
+import io.confluent.flink.plugin.ConfluentSettings;
+import io.confluent.flink.plugin.ConfluentTools;
+
 import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableEnvironment;
-
-import io.confluent.flink.plugin.ConfluentSettings;
-import io.confluent.flink.plugin.ConfluentTools;
 
 import static org.apache.flink.table.api.Expressions.$;
 

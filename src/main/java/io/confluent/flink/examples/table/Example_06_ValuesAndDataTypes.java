@@ -1,11 +1,5 @@
 package io.confluent.flink.examples.table;
 
-import static org.apache.flink.table.api.Expressions.array;
-import static org.apache.flink.table.api.Expressions.lit;
-import static org.apache.flink.table.api.Expressions.map;
-import static org.apache.flink.table.api.Expressions.nullOf;
-import static org.apache.flink.table.api.Expressions.row;
-
 import io.confluent.flink.plugin.ConfluentSettings;
 
 import org.apache.flink.table.api.DataTypes;
@@ -21,6 +15,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Map;
+
+import static org.apache.flink.table.api.Expressions.array;
+import static org.apache.flink.table.api.Expressions.lit;
+import static org.apache.flink.table.api.Expressions.map;
+import static org.apache.flink.table.api.Expressions.nullOf;
+import static org.apache.flink.table.api.Expressions.row;
 
 /** A table program example to create mock data. */
 public class Example_06_ValuesAndDataTypes {
