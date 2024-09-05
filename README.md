@@ -26,7 +26,7 @@ for a local Flink cluster. By adding the `confluent-flink-table-api-java-plugin`
 `CatalogStore`, `Catalog`, `Planner`, `Executor`, and configuration are managed by the plugin and fully integrate with
 Confluent Cloud. Including access to Apache Kafka®, Schema Registry, and Flink Compute Pools.
 
-Note: The Table API plugin is in Open Preview stage. Take a look at the *Known Limitation* section below.
+Note: The Table API plugin is in Open Preview stage. Take a look at the [Known Limitation](#known-limitations) section below.
 
 ### Motivating Example
 
@@ -108,7 +108,7 @@ The included Maven wrapper `mvnw` is useful for a consistent Maven version, you 
 ./mvnw clean package
 ```
 
-Run an example from the JAR file. No worries the program is read-only so it won't affect your existing
+Run an example from the JAR file. No worries the program is read-only, so it won't affect your existing
 Kafka clusters. All results will be printed to the console.
 ```bash
 cd target
@@ -464,7 +464,6 @@ TableEnvironment.listFunctions()
 TableEnvironment.listTables()
 TableEnvironment.listTables(String, String)
 TableEnvironment.listViews()
-TableEnvironment.sqlQuery(String)
 TableEnvironment.sqlQuery(String)
 TableEnvironment.useCatalog(String)
 TableEnvironment.useDatabase(String)
