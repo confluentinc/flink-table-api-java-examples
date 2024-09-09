@@ -40,8 +40,7 @@ public class Example_05_TablePipelines {
     static final String TARGET_TABLE2 = "PricePerCustomer";
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
-        EnvironmentSettings settings =
-                ConfluentSettings.fromPropertiesResource("/cloud.properties");
+        EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
         TableEnvironment env = TableEnvironment.create(settings);
         env.useCatalog(TARGET_CATALOG);
         env.useDatabase(TARGET_DATABASE);
