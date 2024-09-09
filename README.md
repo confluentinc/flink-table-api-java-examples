@@ -1,8 +1,8 @@
-# Apache Flink® Table API on Confluent Cloud - Examples for Java
+# Apache Flink® Table API on Confluent Cloud - Examples
 
 This repository contains examples for running Apache Flink's Table API on Confluent Cloud.
 
-## Introduction to Table API
+## Introduction to Table API for Java
 
 The [Table API](https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/table/overview/) enables a programmatic
 way of developing, testing, and submitting Flink pipelines for processing data streams.
@@ -217,14 +217,14 @@ Store options (or some options) in a `cloud.properties` file:
 ```properties
 # Cloud region
 client.cloud=aws
-client.region=eu-west-1
+client.region=us-east-1
 
 # Access & compute resources
-client.flink-api-key=XXXXXXXXXXXXXXXX
-client.flink-api-secret=XxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXx
-client.organization-id=00000000-0000-0000-0000-000000000000
-client.environment-id=env-xxxxx
-client.compute-pool-id=lfcp-xxxxxxxxxx
+client.flink-api-key=key
+client.flink-api-secret=secret
+client.organization-id=b0b21724-4586-4a07-b787-d0bb5aacbf87
+client.environment-id=env-z3y2x1
+client.compute-pool-id=lfcp-8m03rm
 ```
 
 Reference the `cloud.properties` file:
@@ -235,6 +235,8 @@ ConfluentSettings settings = ConfluentSettings.fromFile("/path/to/cloud.properti
 // Part of the JAR package (in src/main/resources)
 ConfluentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
 ```
+
+A path to a properties file can also be specified by setting the environment variable `FLINK_PROPERTIES`.
 
 ### Via Command-Line arguments
 
@@ -295,6 +297,8 @@ In code call:
 ```java
 ConfluentSettings settings = ConfluentSettingsfromGlobalVariables();
 ```
+
+A path to a properties file can also be specified by setting the environment variable `FLINK_PROPERTIES`.
 
 ### Configuration Options
 

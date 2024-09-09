@@ -30,8 +30,7 @@ public class Example_04_CreatingTables {
     static final String TARGET_TABLE2 = "MyExampleTable2";
 
     public static void main(String[] args) {
-        EnvironmentSettings settings =
-                ConfluentSettings.fromPropertiesResource("/cloud.properties");
+        EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
         TableEnvironment env = TableEnvironment.create(settings);
         env.useCatalog(TARGET_CATALOG);
         env.useDatabase(TARGET_DATABASE);

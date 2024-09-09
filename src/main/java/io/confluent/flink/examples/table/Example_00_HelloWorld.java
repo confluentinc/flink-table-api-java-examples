@@ -21,8 +21,7 @@ public class Example_00_HelloWorld {
     // All logic is defined in a main() method. It can run both in an IDE or CI/CD system.
     public static void main(String[] args) {
         // Setup connection properties to Confluent Cloud
-        EnvironmentSettings settings =
-                ConfluentSettings.fromPropertiesResource("/cloud.properties");
+        EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
 
         // Initialize the session context to get started
         TableEnvironment env = TableEnvironment.create(settings);
