@@ -96,13 +96,12 @@
                             <version>1.23.0</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
-
                         <!-- \# refers to the static imports -->
                         <importOrder>
                             <order>io.confluent,org.apache.flink,,javax,java,scala,\#</order>
                         </importOrder>
-
                         <removeUnusedImports/>
+                        <toggleOffOn />
                     </java>
                 </configuration>
                 <executions>

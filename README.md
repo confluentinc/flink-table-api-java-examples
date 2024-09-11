@@ -156,6 +156,23 @@ All required information can be found in the web UI of Confluent's Cloud Console
 
 Examples should be runnable after setting all configuration options correctly.
 
+### Table API Playground using JShell
+
+For convenience, the repository also contains a [JShell](https://openjdk.org/jeps/222) init script for playing around with
+Table API in an interactive manner.
+
+1. Switch into the `flink-table-api-java-examples` directory.
+
+2. Run `mvn clean package` to build a JAR file.
+
+3. Point to the `cloud.properties` file: `export FLINK_PROPERTIES=./src/main/resources/cloud.properties` 
+
+4. Start the shell with `jshell --class-path ./target/flink-table-api-java-examples-1.0.jar --startup ./jshell-init.jsh`
+
+5. The `TableEnvironment` is pre-initialized from environment variables and available under `env`.
+
+6. Run your first "Hello world!" using `env.executeSql("SELECT 'Hello world!'").print();`
+
 ### How to Continue
 
 This repository can be used as a template for your own project and how to handle Maven dependencies correctly.
