@@ -125,7 +125,7 @@ public class Example_08_IntegrationAndDeployment {
                         .insertInto(SOURCE_TABLE)
                         .execute();
 
-        System.out.println("Waiting for 200 elements in table...");
+        System.out.println("Waiting for at least 200 elements in table...");
         // We start a second Flink statement for monitoring how the copying progresses
         TableResult countResult = env.from(SOURCE_TABLE).select(lit(1).count()).as("c").execute();
         // This waits for the condition to be met:
@@ -142,7 +142,7 @@ public class Example_08_IntegrationAndDeployment {
 
         // By using a closable iterator, the foreground statement will be stopped automatically when
         // the iterator is closed. But the background statement still needs a manual stop.
-        pipelineResult.getJobClient().orElseThrow(IllegalStateException::new).cancel();
+        ConfluentTools.stopStatement(pipelineResult);
 
         System.out.println("Creating table..." + TARGET_TABLE);
         // Create a table for storing the results after deployment.
@@ -208,8 +208,13 @@ public class Example_08_IntegrationAndDeployment {
 
         // Execute the SQL without dynamic options.
         // The result is unbounded and piped into the target table.
-        env.sqlQuery(String.format(SQL, "")).insertInto(TARGET_TABLE).execute();
+        TableResult insertIntoResult =
+                env.sqlQuery(String.format(SQL, "")).insertInto(TARGET_TABLE).execute();
 
-        System.out.println("Statement has been deployed as: " + statementName);
+        // The API might add suffixes to manual statement names such as '-sql' or '-api'.
+        // For the final submitted name, use the provided tools.
+        String finalName = ConfluentTools.getStatementName(insertIntoResult);
+
+        System.out.println("Statement has been deployed as: " + finalName);
     }
 }

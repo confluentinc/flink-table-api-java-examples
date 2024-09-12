@@ -411,6 +411,20 @@ ConfluentTools.collectMaterialized(table);
 ConfluentTools.printMaterialized(table);
 ```
 
+### `ConfluentTools.getStatementName` / `ConfluentTools.stopStatement`
+
+Additional lifecycle methods are available to control statements on Confluent Cloud after they have been submitted.
+
+```java
+// On TableResult object
+TableResult tableResult = env.executeSql("SELECT * FROM examples.marketplace.customers");
+String statementName = ConfluentTools.getStatementName(tableResult);
+ConfluentTools.stopStatement(tableResult);
+
+// Based on statement name
+ConfluentTools.stopStatement(env, "table-api-2024-03-21-150457-36e0dbb2e366-sql");
+```
+
 ### Confluent Table Descriptor
 
 A table descriptor for creating tables located in Confluent Cloud programmatically.
