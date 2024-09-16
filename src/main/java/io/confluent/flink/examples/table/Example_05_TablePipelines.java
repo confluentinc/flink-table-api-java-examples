@@ -100,9 +100,6 @@ public class Example_05_TablePipelines {
                                         .select($("customer_id"), $("price"))
                                         .insertInto(TARGET_TABLE2));
 
-        // One can explain or execute a statement set
-        statementSet.printExplain();
-
         // Executes a statement set that splits the 'orders' table into two tables,
         // a 'product_id | price' table and a 'customer_id | price' one
         statementSet.execute();
