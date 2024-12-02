@@ -77,7 +77,9 @@ public static void main(String[] args) {
 1. Sign up for Confluent Cloud at [https://confluent.cloud](https://confluent.cloud/signup)
 2. [Create a compute pool](https://docs.confluent.io/cloud/current/flink/operate-and-deploy/create-compute-pool.html#create-a-compute-pool-in-ccloud-console)
    in the web UI of Confluent's Cloud Console
-3. Optional: [Create a Kafka cluster](https://docs.confluent.io/cloud/current/clusters/create-cluster.html#manage-ak-clusters-on-ccloud)
+3. [Generate an API Key](https://docs.confluent.io/cloud/current/flink/operate-and-deploy/generate-api-key-for-flink.html#generate-an-api-key)
+   for the region where you created your compute pool
+4. Optional: [Create a Kafka cluster](https://docs.confluent.io/cloud/current/clusters/create-cluster.html#manage-ak-clusters-on-ccloud)
    if you want to run examples that store data in Kafka
 
 ### Run Examples
