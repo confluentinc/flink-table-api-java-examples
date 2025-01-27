@@ -314,7 +314,7 @@ java -jar my-table-program.jar
 
 In code call:
 ```java
-ConfluentSettings settings = ConfluentSettingsfromGlobalVariables();
+ConfluentSettings settings = ConfluentSettings.fromGlobalVariables();
 ```
 
 A path to a properties file can also be specified by setting the environment variable `FLINK_PROPERTIES`.
