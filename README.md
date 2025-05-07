@@ -363,7 +363,8 @@ This option specifies the base domain for REST API calls to Confluent Cloud. Whi
 
 - **Default**: No default value
 - **Example**: `proxy.confluent.cloud`
-- **Usage**: When specified, the plugin constructs the full Flink statement API endpoint URL as `https://flink.{region}.{cloud}.{rest-endpoint}` where `{region}` and `{cloud}` are replaced with the configured region and cloud provider values. If `client.rest-endpoint` is set, it automatically determines the statement API endpoint, and any template settings will be ignored (with an exception thrown if both are set).
+- **Usage**: When specified, the plugin constructs the full Flink statement API endpoint URL as `https://flink.{region}.{cloud}.{rest-endpoint}` where `{region}` and `{cloud}` are replaced with the configured region and cloud provider values.
+- **Important**: `client.endpoint-template` and `client.rest-endpoint` are mutually exclusive. If both are set, an exception is thrown.
 - **Environment Variable**: `REST_ENDPOINT`
 
 ### Relationship and Default Behavior
