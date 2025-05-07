@@ -10,8 +10,8 @@
     <name>Apache Flink® Table API Java Examples on Confluent Cloud</name>
 
     <properties>
-        <flink.version>1.20.0</flink.version>
-        <confluent-plugin.version>1.20-48</confluent-plugin.version>
+        <flink.version>1.20.1</flink.version>
+        <confluent-plugin.version>1.20-52</confluent-plugin.version>
         <target.java.version>11</target.java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>${target.java.version}</maven.compiler.source>

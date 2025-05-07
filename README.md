@@ -35,10 +35,10 @@ can use the examples of this repository to play around with Flink on Confluent C
 
 ```java
 import io.confluent.flink.plugin.*;
-
 import org.apache.flink.table.api.*;
 import org.apache.flink.types.Row;
 import static org.apache.flink.table.api.Expressions.*;
+import java.util.List;
 
 // A table program...
 //   - runs in a regular main() method
@@ -56,7 +56,8 @@ public static void main(String[] args) {
   env.sqlQuery("SELECT 'Hello world!'").execute().print();
 
   // Structure your code with Table objects - the main ingredient of Table API.
-  Table table = env.from("examples.marketplace.clicks").filter($("user_agent").like("Mozilla%"));
+  Table table =
+      env.from("examples.marketplace.clicks").filter($("user_agent").like("Mozilla%"));
 
   table.printSchema();
   table.printExplain();
@@ -65,9 +66,28 @@ public static void main(String[] args) {
   List<Row> expected = ConfluentTools.collectMaterialized(table, 50);
   List<Row> actual = List.of(Row.of(42, 500));
   if (!expected.equals(actual)) {
-      System.out.println("Results don't match!");
+    // Print all data
+    System.out.println("Results don't match");
+    System.out.println(
+        expected.stream().map(Row::toString).collect(Collectors.joining("\n")));
+    // Or access nested data
+    System.out.println("First row: " + expected.get(0).getFieldAs("user_id"));
   }
-}
+
+  // Access your Kafka topics or start with the built-in examples
+  // with unbounded data sets
+  env.from("examples.marketplace.clicks")
+      .groupBy($("user_id"))
+      .select($("user_id"), $("view_time").sum())
+      .execute()
+      .print();
+
+  // Or pipe data from A to B
+  TablePipeline pipeline = env.from("A").select(withAllColumns()).insertInto("B");
+  // Asynchronously
+  // pipeline.execute();
+  // Or synchronously
+  // pipeline.execute().await();
 ```
 
 ## Getting Started
@@ -105,7 +125,7 @@ cd flink-table-api-java-examples
 ```
 
 Use Maven to build a JAR file of the project. Make sure you have at least Java 11 installed.
-The included Maven wrapper `mvnw` is useful for a consistent Maven version, you don't need to install Maven. 
+The included Maven wrapper `mvnw` is useful for a consistent Maven version, you don't need to install Maven.
 ```bash
 ./mvnw clean package
 ```
@@ -167,7 +187,7 @@ Table API in an interactive manner.
 
 2. Run `mvn clean package` to build a JAR file.
 
-3. Point to the `cloud.properties` file: `export FLINK_PROPERTIES=./src/main/resources/cloud.properties` 
+3. Point to the `cloud.properties` file: `export FLINK_PROPERTIES=./src/main/resources/cloud.properties`
 
 4. Start the shell with `jshell --class-path ./target/flink-table-api-java-examples-1.0.jar --startup ./jshell-init.jsh`
 
@@ -185,16 +205,16 @@ section of your `pom.xml` file.
 ```xml
 <!-- Apache Flink dependencies -->
 <dependency>
-   <groupId>org.apache.flink</groupId>
-   <artifactId>flink-table-api-java</artifactId>
-   <version>${flink.version}</version>
+  <groupId>org.apache.flink</groupId>
+  <artifactId>flink-table-api-java</artifactId>
+  <version>${flink.version}</version>
 </dependency>
 
-<!-- Confluent Flink Table API Java plugin -->
+  <!-- Confluent Flink Table API Java plugin -->
 <dependency>
-   <groupId>io.confluent.flink</groupId>
-   <artifactId>confluent-flink-table-api-java-plugin</artifactId>
-   <version>${confluent-plugin.version}</version>
+<groupId>io.confluent.flink</groupId>
+<artifactId>confluent-flink-table-api-java-plugin</artifactId>
+<version>${confluent-plugin.version}</version>
 </dependency>
 ```
 
@@ -221,9 +241,9 @@ public static void main(String[] args) {
 
   // Code sets the session name and SQL-specific options.
   ConfluentSettings settings = ConfluentSettings.newBuilder(args)
-    .setContextName("MyTableProgram")
-    .setOption("sql.local-time-zone", "UTC")
-    .build();
+      .setContextName("MyTableProgram")
+      .setOption("sql.local-time-zone", "UTC")
+      .build();
 
   TableEnvironment env = TableEnvironment.create(settings);
 }
@@ -286,14 +306,14 @@ Pass all options (or some options) in code:
 
 ```java
 ConfluentSettings settings = ConfluentSettings.newBuilder()
-  .setCloud("aws")
-  .setRegion("us-east-1")
-  .setFlinkApiKey("key")
-  .setFlinkApiSecret("secret")
-  .setOrganizationId("b0b21724-4586-4a07-b787-d0bb5aacbf87")
-  .setEnvironmentId("env-z3y2x1")
-  .setComputePoolId("lfcp-8m03rm")
-  .build();
+    .setCloud("aws")
+    .setRegion("us-east-1")
+    .setFlinkApiKey("key")
+    .setFlinkApiSecret("secret")
+    .setOrganizationId("b0b21724-4586-4a07-b787-d0bb5aacbf87")
+    .setEnvironmentId("env-z3y2x1")
+    .setComputePoolId("lfcp-8m03rm")
+    .build();
 ```
 
 ### Via Environment Variables
@@ -335,13 +355,81 @@ The following configuration needs to be provided:
 
 Additional configuration:
 
-| Property key            | CLI arg            | Environment variable | Required | Comment                                                                                                  |
-|-------------------------|--------------------|----------------------|----------|----------------------------------------------------------------------------------------------------------|
-| `client.principal`      | `--principal`      | `PRINCIPAL_ID`       | N        | Principal that runs submitted statements. For example: `sa-23kgz4` (for a service account)               |
-| `client.context`        | `--context`        |                      | N        | A name for this Table API session. For example: `my_table_program`                                       |
-| `client.statement-name` | `--statement-name` |                      | N        | Unique name for statement submission. By default, generated using a UUID.                                |
-| `client.rest-endpoint`  | `--rest-endpoint`  | `REST_ENDPOINT`      | N        | URL to the REST endpoint. For example: `proxyto.confluent.cloud`                                         |
-| `client.catalog-cache`  |                    |                      | N        | Expiration time for catalog objects. For example: '5 min'. '1 min' by default. '0' disables the caching. |
+| Property key               | CLI arg               | Environment variable | Required | Comment                                                                                                  |
+|----------------------------|-----------------------|----------------------|----------|----------------------------------------------------------------------------------------------------------|
+| `client.endpoint-template` | `--endpoint-template` | `ENDPOINT_TEMPLATE`  | N        | A template for the endpoint URL. For example: `https://flinkpls-dom123.{region}.{cloud}.confluent.cloud` |
+| `client.principal`         | `--principal`         | `PRINCIPAL_ID`       | N        | Principal that runs submitted statements. For example: `sa-23kgz4` (for a service account)               |
+| `client.context`           | `--context`           |                      | N        | A name for this Table API session. For example: `my_table_program`                                       |
+| `client.statement-name`    | `--statement-name`    |                      | N        | Unique name for statement submission. By default, generated using a UUID.                                |
+| `client.rest-endpoint`     | `--rest-endpoint`     | `REST_ENDPOINT`      | N        | URL to the REST endpoint. For example: `proxyto.confluent.cloud`                                         |
+| `client.catalog-cache`     |                       |                      | N        | Expiration time for catalog objects. For example: '5 min'. '1 min' by default. '0' disables the caching. |
+
+### Endpoint Configuration
+
+The Confluent Flink plugin provides options to configure endpoints for connecting to Confluent Cloud services. **The template-based approach is the recommended method.**
+
+### `client.endpoint-template`
+
+This option provides a template for constructing the Flink statement API endpoint URL.
+
+- **Default**: `https://flink.{region}.{cloud}.confluent.cloud`
+- **Example**: `https://flinkpls-dom123.{region}.{cloud}.confluent.cloud`
+- **Usage**: The template supports placeholders `{region}` and `{cloud}` that are replaced with the configured region and cloud provider values.
+- **Environment Variable**: `ENDPOINT_TEMPLATE`
+
+### `client.rest-endpoint` (Discouraged)
+
+This option specifies the base domain for REST API calls to Confluent Cloud. While still supported, using the template-based configuration above is preferred.
+
+- **Default**: No default value
+- **Example**: `proxy.confluent.cloud`
+- **Usage**: When specified, the plugin constructs the full Flink statement API endpoint URL as `https://flink.{region}.{cloud}.{rest-endpoint}` where `{region}` and `{cloud}` are replaced with the configured region and cloud provider values.
+- **Important**: `client.endpoint-template` and `client.rest-endpoint` are mutually exclusive. If both are set, an exception is thrown.
+- **Environment Variable**: `REST_ENDPOINT`
+
+### Relationship and Default Behavior
+
+1. **Mutual Exclusivity**:
+    - `client.endpoint-template` and `client.rest-endpoint` cannot be set simultaneously
+
+2. **Default Behavior**:
+    - If neither `client.rest-endpoint` nor `client.endpoint-template` is configured, the default template `https://flink.{region}.{cloud}.confluent.cloud` is used for statement API
+    - If endpoint templates are used, each endpoint is constructed independently with the provided templates
+
+### Examples
+
+Here's a simple example showing different ways to configure endpoints:
+
+```java
+// Option 1 (RECOMMENDED): Using endpoint templates
+// Resolved endpoints:
+// - Statement API: https://flinkpls-dom123.us-east-1.aws.confluent.cloud
+ConfluentSettings settings1 = ConfluentSettings.newBuilder()
+        .setRegion("us-east-1")
+        .setCloud("aws")
+        .setEndpointTemplate("https://flinkpls-dom123.{region}.{cloud}.confluent.cloud")
+        // Other required settings...
+        .build();
+
+// Option 2: Using properties file with endpoint templates
+// cloud.properties:
+// client.region=us-east-1
+// client.cloud=aws
+// client.endpoint-template=https://flinkpls-dom123.{region}.{cloud}.confluent.cloud
+// Resolved endpoints:
+// - Statement API: https://flinkpls-dom123.us-east-1.aws.confluent.cloud
+ConfluentSettings settings2 = ConfluentSettings.fromResource("/cloud.properties");
+
+// Option 3 (DISCOURAGED): Using rest-endpoint (both statement endpoint will be derived from this)
+// Resolved endpoints:
+// - Statement API: https://flink.us-east-1.aws.proxy.confluent.cloud
+ConfluentSettings settings3 = ConfluentSettings.newBuilder()
+    .setRegion("us-east-1")
+    .setCloud("aws")
+    .setRestEndpoint("proxy.confluent.cloud")
+    // Other required settings...
+    .build();
+```
 
 ## Documentation for Confluent Utilities
 
@@ -438,13 +526,13 @@ and convenience methods for working with Confluent tables.
 
 ```java
 TableDescriptor descriptor = ConfluentTableDescriptor.forManaged()
-  .schema(
-    Schema.newBuilder()
-      .column("i", DataTypes.INT())
-      .column("s", DataTypes.INT())
-      .watermark("$rowtime", $("$rowtime").minus(lit(5).seconds())) // Access $rowtime system column
-      .build())
-  .build();
+    .schema(
+        Schema.newBuilder()
+            .column("i", DataTypes.INT())
+            .column("s", DataTypes.INT())
+            .watermark("$rowtime", $("$rowtime").minus(lit(5).seconds())) // Access $rowtime system column
+            .build())
+    .build();
 
 env.createTable("t1", descriptor);
 ```
@@ -465,12 +553,12 @@ The following feature are currently not supported:
 - CompiledPlan features are not supported
 - Batch mode
 - Restrictions coming from Confluent Cloud
-  - custom connectors/formats
-  - processing time operations
-  - structured data types
-  - many configuration options
-  - limited SQL syntax
-  - batch execution mode
+    - custom connectors/formats
+    - processing time operations
+    - structured data types
+    - many configuration options
+    - limited SQL syntax
+    - batch execution mode
 
 ### Issues in Open Source Flink
 
