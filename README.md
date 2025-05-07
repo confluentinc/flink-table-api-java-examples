@@ -65,7 +65,7 @@ public static void main(String[] args) {
   List<Row> expected = ConfluentTools.collectMaterialized(table, 50);
   List<Row> actual = List.of(Row.of(42, 500));
   if (!expected.equals(actual)) {
-      System.out.println("Results don't match!");
+    System.out.println("Results don't match!");
   }
 }
 ```
@@ -105,7 +105,7 @@ cd flink-table-api-java-examples
 ```
 
 Use Maven to build a JAR file of the project. Make sure you have at least Java 11 installed.
-The included Maven wrapper `mvnw` is useful for a consistent Maven version, you don't need to install Maven. 
+The included Maven wrapper `mvnw` is useful for a consistent Maven version, you don't need to install Maven.
 ```bash
 ./mvnw clean package
 ```
@@ -167,7 +167,7 @@ Table API in an interactive manner.
 
 2. Run `mvn clean package` to build a JAR file.
 
-3. Point to the `cloud.properties` file: `export FLINK_PROPERTIES=./src/main/resources/cloud.properties` 
+3. Point to the `cloud.properties` file: `export FLINK_PROPERTIES=./src/main/resources/cloud.properties`
 
 4. Start the shell with `jshell --class-path ./target/flink-table-api-java-examples-1.0.jar --startup ./jshell-init.jsh`
 
@@ -185,16 +185,16 @@ section of your `pom.xml` file.
 ```xml
 <!-- Apache Flink dependencies -->
 <dependency>
-   <groupId>org.apache.flink</groupId>
-   <artifactId>flink-table-api-java</artifactId>
-   <version>${flink.version}</version>
+  <groupId>org.apache.flink</groupId>
+  <artifactId>flink-table-api-java</artifactId>
+  <version>${flink.version}</version>
 </dependency>
 
-<!-- Confluent Flink Table API Java plugin -->
+  <!-- Confluent Flink Table API Java plugin -->
 <dependency>
-   <groupId>io.confluent.flink</groupId>
-   <artifactId>confluent-flink-table-api-java-plugin</artifactId>
-   <version>${confluent-plugin.version}</version>
+<groupId>io.confluent.flink</groupId>
+<artifactId>confluent-flink-table-api-java-plugin</artifactId>
+<version>${confluent-plugin.version}</version>
 </dependency>
 ```
 
@@ -221,9 +221,9 @@ public static void main(String[] args) {
 
   // Code sets the session name and SQL-specific options.
   ConfluentSettings settings = ConfluentSettings.newBuilder(args)
-    .setContextName("MyTableProgram")
-    .setOption("sql.local-time-zone", "UTC")
-    .build();
+      .setContextName("MyTableProgram")
+      .setOption("sql.local-time-zone", "UTC")
+      .build();
 
   TableEnvironment env = TableEnvironment.create(settings);
 }
@@ -286,14 +286,14 @@ Pass all options (or some options) in code:
 
 ```java
 ConfluentSettings settings = ConfluentSettings.newBuilder()
-  .setCloud("aws")
-  .setRegion("us-east-1")
-  .setFlinkApiKey("key")
-  .setFlinkApiSecret("secret")
-  .setOrganizationId("b0b21724-4586-4a07-b787-d0bb5aacbf87")
-  .setEnvironmentId("env-z3y2x1")
-  .setComputePoolId("lfcp-8m03rm")
-  .build();
+    .setCloud("aws")
+    .setRegion("us-east-1")
+    .setFlinkApiKey("key")
+    .setFlinkApiSecret("secret")
+    .setOrganizationId("b0b21724-4586-4a07-b787-d0bb5aacbf87")
+    .setEnvironmentId("env-z3y2x1")
+    .setComputePoolId("lfcp-8m03rm")
+    .build();
 ```
 
 ### Via Environment Variables
@@ -505,13 +505,13 @@ and convenience methods for working with Confluent tables.
 
 ```java
 TableDescriptor descriptor = ConfluentTableDescriptor.forManaged()
-  .schema(
-    Schema.newBuilder()
-      .column("i", DataTypes.INT())
-      .column("s", DataTypes.INT())
-      .watermark("$rowtime", $("$rowtime").minus(lit(5).seconds())) // Access $rowtime system column
-      .build())
-  .build();
+    .schema(
+        Schema.newBuilder()
+            .column("i", DataTypes.INT())
+            .column("s", DataTypes.INT())
+            .watermark("$rowtime", $("$rowtime").minus(lit(5).seconds())) // Access $rowtime system column
+            .build())
+    .build();
 
 env.createTable("t1", descriptor);
 ```
@@ -532,12 +532,12 @@ The following feature are currently not supported:
 - CompiledPlan features are not supported
 - Batch mode
 - Restrictions coming from Confluent Cloud
-  - custom connectors/formats
-  - processing time operations
-  - structured data types
-  - many configuration options
-  - limited SQL syntax
-  - batch execution mode
+    - custom connectors/formats
+    - processing time operations
+    - structured data types
+    - many configuration options
+    - limited SQL syntax
+    - batch execution mode
 
 ### Issues in Open Source Flink
 
