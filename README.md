@@ -35,10 +35,10 @@ can use the examples of this repository to play around with Flink on Confluent C
 
 ```java
 import io.confluent.flink.plugin.*;
-
 import org.apache.flink.table.api.*;
 import org.apache.flink.types.Row;
 import static org.apache.flink.table.api.Expressions.*;
+import java.util.List;
 
 // A table program...
 //   - runs in a regular main() method
@@ -56,7 +56,8 @@ public static void main(String[] args) {
   env.sqlQuery("SELECT 'Hello world!'").execute().print();
 
   // Structure your code with Table objects - the main ingredient of Table API.
-  Table table = env.from("examples.marketplace.clicks").filter($("user_agent").like("Mozilla%"));
+  Table table =
+      env.from("examples.marketplace.clicks").filter($("user_agent").like("Mozilla%"));
 
   table.printSchema();
   table.printExplain();
@@ -65,9 +66,28 @@ public static void main(String[] args) {
   List<Row> expected = ConfluentTools.collectMaterialized(table, 50);
   List<Row> actual = List.of(Row.of(42, 500));
   if (!expected.equals(actual)) {
-    System.out.println("Results don't match!");
+    // Print all data
+    System.out.println("Results don't match");
+    System.out.println(
+        expected.stream().map(Row::toString).collect(Collectors.joining("\n")));
+    // Or access nested data
+    System.out.println("First row: " + expected.get(0).getFieldAs("user_id"));
   }
-}
+
+  // Access your Kafka topics or start with the built-in examples
+  // with unbounded data sets
+  env.from("examples.marketplace.clicks")
+      .groupBy($("user_id"))
+      .select($("user_id"), $("view_time").sum())
+      .execute()
+      .print();
+
+  // Or pipe data from A to B
+  TablePipeline pipeline = env.from("A").select(withAllColumns()).insertInto("B");
+  // Asynchronously
+  // pipeline.execute();
+  // Or synchronously
+  // pipeline.execute().await();
 ```
 
 ## Getting Started
