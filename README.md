@@ -335,14 +335,14 @@ The following configuration needs to be provided:
 
 Additional configuration:
 
-| Property key                        | CLI arg                        | Environment variable         | Required | Comment                                                                                                                        |
-|-------------------------------------|--------------------------------|------------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------|
-| `client.endpoint-template`          | `--endpoint-template`          | `ENDPOINT_TEMPLATE`          | N        | A template for the endpoint URL. For example: `https://flinkpls-dom123.{region}.{cloud}.confluent.cloud`                       |
-| `client.principal`                  | `--principal`                  | `PRINCIPAL_ID`               | N        | Principal that runs submitted statements. For example: `sa-23kgz4` (for a service account)                                     |
-| `client.context`                    | `--context`                    |                              | N        | A name for this Table API session. For example: `my_table_program`                                                             |
-| `client.statement-name`             | `--statement-name`             |                              | N        | Unique name for statement submission. By default, generated using a UUID.                                                      |
-| `client.rest-endpoint`              | `--rest-endpoint`              | `REST_ENDPOINT`              | N        | URL to the REST endpoint. For example: `proxyto.confluent.cloud`                                                               |
-| `client.catalog-cache`              |                                |                              | N        | Expiration time for catalog objects. For example: '5 min'. '1 min' by default. '0' disables the caching.                       |
+| Property key               | CLI arg               | Environment variable | Required | Comment                                                                                                  |
+|----------------------------|-----------------------|----------------------|----------|----------------------------------------------------------------------------------------------------------|
+| `client.endpoint-template` | `--endpoint-template` | `ENDPOINT_TEMPLATE`  | N        | A template for the endpoint URL. For example: `https://flinkpls-dom123.{region}.{cloud}.confluent.cloud` |
+| `client.principal`         | `--principal`         | `PRINCIPAL_ID`       | N        | Principal that runs submitted statements. For example: `sa-23kgz4` (for a service account)               |
+| `client.context`           | `--context`           |                      | N        | A name for this Table API session. For example: `my_table_program`                                       |
+| `client.statement-name`    | `--statement-name`    |                      | N        | Unique name for statement submission. By default, generated using a UUID.                                |
+| `client.rest-endpoint`     | `--rest-endpoint`     | `REST_ENDPOINT`      | N        | URL to the REST endpoint. For example: `proxyto.confluent.cloud`                                         |
+| `client.catalog-cache`     |                       |                      | N        | Expiration time for catalog objects. For example: '5 min'. '1 min' by default. '0' disables the caching. |
 
 ### Endpoint Configuration
 
