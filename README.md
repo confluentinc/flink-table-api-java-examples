@@ -134,7 +134,7 @@ Run an example from the JAR file. No worries the program is read-only, so it won
 Kafka clusters. All results will be printed to the console.
 ```bash
 cd target
-java -jar flink-table-api-java-examples-1.0.jar io.confluent.flink.examples.table.Example_00_HelloWorld
+java -cp flink-table-api-java-examples-1.0.jar io.confluent.flink.examples.table.Example_00_HelloWorld
 ```
 
 An output similar to the following means that you are able to run the examples:
