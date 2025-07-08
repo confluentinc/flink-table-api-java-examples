@@ -349,16 +349,16 @@ The following configuration needs to be provided:
 | `client.region`           | `--region`           | `CLOUD_REGION`       | Y        | Confluent identifier for a cloud provider's region. For example: `us-east-1` |
 | `client.flink-api-key`    | `--flink-api-key`    | `FLINK_API_KEY`      | Y        | API key for Flink access.                                                    |
 | `client.flink-api-secret` | `--flink-api-secret` | `FLINK_API_SECRET`   | Y        | API secret for Flink access.                                                 |
-| `client.organization`     | `--organization`     | `ORG_ID`             | Y        | ID of the organization. For example: `b0b21724-4586-4a07-b787-d0bb5aacbf87`  |
-| `client.environment`      | `--environment`      | `ENV_ID`             | Y        | ID of the environment. For example: `env-z3y2x1`                             |
-| `client.compute-pool`     | `--compute-pool`     | `COMPUTE_POOL_ID`    | Y        | ID of the compute pool. For example: `lfcp-8m03rm`                           |
+| `client.organization-id`  | `--organization-id`  | `ORG_ID`             | Y        | ID of the organization. For example: `b0b21724-4586-4a07-b787-d0bb5aacbf87`  |
+| `client.environment-id`   | `--environment-id`   | `ENV_ID`             | Y        | ID of the environment. For example: `env-z3y2x1`                             |
+| `client.compute-pool-id`  | `--compute-pool-id`  | `COMPUTE_POOL_ID`    | Y        | ID of the compute pool. For example: `lfcp-8m03rm`                           |
 
 Additional configuration:
 
 | Property key               | CLI arg               | Environment variable | Required | Comment                                                                                                  |
 |----------------------------|-----------------------|----------------------|----------|----------------------------------------------------------------------------------------------------------|
 | `client.endpoint-template` | `--endpoint-template` | `ENDPOINT_TEMPLATE`  | N        | A template for the endpoint URL. For example: `https://flinkpls-dom123.{region}.{cloud}.confluent.cloud` |
-| `client.principal`         | `--principal`         | `PRINCIPAL_ID`       | N        | Principal that runs submitted statements. For example: `sa-23kgz4` (for a service account)               |
+| `client.principal-id`      | `--principal-id`      | `PRINCIPAL_ID`       | N        | Principal that runs submitted statements. For example: `sa-23kgz4` (for a service account)               |
 | `client.context`           | `--context`           |                      | N        | A name for this Table API session. For example: `my_table_program`                                       |
 | `client.statement-name`    | `--statement-name`    |                      | N        | Unique name for statement submission. By default, generated using a UUID.                                |
 | `client.rest-endpoint`     | `--rest-endpoint`     | `REST_ENDPOINT`      | N        | URL to the REST endpoint. For example: `proxyto.confluent.cloud`                                         |
