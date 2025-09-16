@@ -353,16 +353,27 @@ The following configuration needs to be provided:
 | `client.environment-id`   | `--environment-id`   | `ENV_ID`             | Y        | ID of the environment. For example: `env-z3y2x1`                             |
 | `client.compute-pool-id`  | `--compute-pool-id`  | `COMPUTE_POOL_ID`    | Y        | ID of the compute pool. For example: `lfcp-8m03rm`                           |
 
+Required configuration for supporting UDF uploads:
+
+Note: Artifact key and secret can be created via Web Console under `API keys` -> `Cloud resource management`.
+
+| Property key                 | CLI arg                 | Environment variable   | Comment                           |
+|------------------------------|-------------------------|------------------------|-----------------------------------|
+| `client.artifact-api-key`    | `--artifact-api-key`    | `ARTIFACT_API_KEY`     | API key for Artifact creation.    |
+| `client.artifact-api-secret` | `--artifact-api-secret` | `ARTIFACT_API_SECRET`  | API secret for Artifact creation. |
+
 Additional configuration:
 
-| Property key               | CLI arg               | Environment variable | Required | Comment                                                                                                  |
-|----------------------------|-----------------------|----------------------|----------|----------------------------------------------------------------------------------------------------------|
-| `client.endpoint-template` | `--endpoint-template` | `ENDPOINT_TEMPLATE`  | N        | A template for the endpoint URL. For example: `https://flinkpls-dom123.{region}.{cloud}.confluent.cloud` |
-| `client.principal-id`      | `--principal-id`      | `PRINCIPAL_ID`       | N        | Principal that runs submitted statements. For example: `sa-23kgz4` (for a service account)               |
-| `client.context`           | `--context`           |                      | N        | A name for this Table API session. For example: `my_table_program`                                       |
-| `client.statement-name`    | `--statement-name`    |                      | N        | Unique name for statement submission. By default, generated using a UUID.                                |
-| `client.rest-endpoint`     | `--rest-endpoint`     | `REST_ENDPOINT`      | N        | URL to the REST endpoint. For example: `proxyto.confluent.cloud`                                         |
-| `client.catalog-cache`     |                       |                      | N        | Expiration time for catalog objects. For example: '5 min'. '1 min' by default. '0' disables the caching. |
+| Property key                        | CLI arg                        | Environment variable         | Required | Comment                                                                                                                        |
+|-------------------------------------|--------------------------------|------------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------|
+| `client.endpoint-template`          | `--endpoint-template`          | `ENDPOINT_TEMPLATE`          | N        | A template for the endpoint URL. For example: `https://flinkpls-dom123.{region}.{cloud}.confluent.cloud`                       |
+| `client.artifact-endpoint-template` | `--artifact-endpoint-template` | `ARTIFACT_ENDPOINT_TEMPLATE` | N        | A template for the artifact endpoint URL. For example: `https://api.{region}.{cloud}.confluent.cloud`                          |
+| `client.principal-id`               | `--principal-id`               | `PRINCIPAL_ID`               | N        | Principal that runs submitted statements. For example: `sa-23kgz4` (for a service account)                                     |
+| `client.context`                    | `--context`                    |                              | N        | A name for this Table API session. For example: `my_table_program`                                                             |
+| `client.statement-name`             | `--statement-name`             |                              | N        | Unique name for statement submission. By default, generated using a UUID.                                                      |
+| `client.rest-endpoint`              | `--rest-endpoint`              | `REST_ENDPOINT`              | N        | URL to the REST endpoint. For example: `proxyto.confluent.cloud`                                                               |
+| `client.catalog-cache`              |                                |                              | N        | Expiration time for catalog objects. For example: '5 min'. '1 min' by default. '0' disables the caching.                       |
+| `client.tmp-dir`                    | `--tmp-dir`                    |                              | N        | Directory for temporary files created by the plugin, e.g. UDF jars. For example: '/tmp'. By default value of 'java.io.tmpdir'. |
 
 ### Endpoint Configuration
 
@@ -376,6 +387,15 @@ This option provides a template for constructing the Flink statement API endpoin
 - **Example**: `https://flinkpls-dom123.{region}.{cloud}.confluent.cloud`
 - **Usage**: The template supports placeholders `{region}` and `{cloud}` that are replaced with the configured region and cloud provider values.
 - **Environment Variable**: `ENDPOINT_TEMPLATE`
+
+### `client.artifact-endpoint-template`
+
+This option provides a template for constructing the URL used for uploading artifacts (like UDF JARs).
+
+- **Default**: `https://api.confluent.cloud`
+- **Example**: `https://api.{region}.{cloud}.confluent.cloud`
+- **Usage**: Similar to the endpoint template, this supports placeholders `{region}` and `{cloud}`.
+- **Environment Variable**: `ARTIFACT_ENDPOINT_TEMPLATE`
 
 ### `client.rest-endpoint` (Discouraged)
 
@@ -391,9 +411,11 @@ This option specifies the base domain for REST API calls to Confluent Cloud. Whi
 
 1. **Mutual Exclusivity**:
     - `client.endpoint-template` and `client.rest-endpoint` cannot be set simultaneously
+    - `client.artifact-endpoint-template` and `client.rest-endpoint` cannot be set simultaneously
 
 2. **Default Behavior**:
     - If neither `client.rest-endpoint` nor `client.endpoint-template` is configured, the default template `https://flink.{region}.{cloud}.confluent.cloud` is used for statement API
+    - If neither `client.rest-endpoint` nor `client.artifact-endpoint-template` is specified, the default artifact endpoint `https://api.confluent.cloud` is used
     - If endpoint templates are used, each endpoint is constructed independently with the provided templates
 
 ### Examples
@@ -408,6 +430,7 @@ ConfluentSettings settings1 = ConfluentSettings.newBuilder()
         .setRegion("us-east-1")
         .setCloud("aws")
         .setEndpointTemplate("https://flinkpls-dom123.{region}.{cloud}.confluent.cloud")
+        .setArtifactEndpointTemplate("https://artifacts.{region}.{cloud}.custom-domain.com")
         // Other required settings...
         .build();
 
@@ -418,11 +441,13 @@ ConfluentSettings settings1 = ConfluentSettings.newBuilder()
 // client.endpoint-template=https://flinkpls-dom123.{region}.{cloud}.confluent.cloud
 // Resolved endpoints:
 // - Statement API: https://flinkpls-dom123.us-east-1.aws.confluent.cloud
+// - Artifact API: https://api.confluent.cloud (default)
 ConfluentSettings settings2 = ConfluentSettings.fromResource("/cloud.properties");
 
 // Option 3 (DISCOURAGED): Using rest-endpoint (both statement endpoint will be derived from this)
 // Resolved endpoints:
 // - Statement API: https://flink.us-east-1.aws.proxy.confluent.cloud
+// - Artifact API: https://api.proxy.confluent.cloud
 ConfluentSettings settings3 = ConfluentSettings.newBuilder()
     .setRegion("us-east-1")
     .setCloud("aws")
@@ -501,7 +526,7 @@ ConfluentTools.collectMaterialized(table);
 ConfluentTools.printMaterialized(table);
 ```
 
-### `ConfluentTools.getStatementName` / `ConfluentTools.stopStatement`
+### `ConfluentTools.getStatementName` / `ConfluentTools.stopStatement` / `ConfluentTools.deleteStatement`
 
 Additional lifecycle methods are available to control statements on Confluent Cloud after they have been submitted.
 
@@ -512,7 +537,10 @@ String statementName = ConfluentTools.getStatementName(tableResult);
 ConfluentTools.stopStatement(tableResult);
 
 // Based on statement name
+// Stop a running statement
 ConfluentTools.stopStatement(env, "table-api-2024-03-21-150457-36e0dbb2e366-sql");
+// Delete the statement entirely from the system
+ConfluentTools.deleteStatement(env, "table-api-2024-03-21-150457-36e0dbb2e366-sql");
 ```
 
 ### Confluent Table Descriptor
@@ -548,7 +576,6 @@ The following feature are currently not supported:
 - Temporary catalog objects (including tables, views, functions)
 - Custom modules
 - Custom catalogs
-- User-defined functions (including system functions)
 - Anonymous, inline objects (including functions, data types)
 - CompiledPlan features are not supported
 - Batch mode
@@ -576,6 +603,8 @@ The following API methods are considered stable and ready to be used:
 // TableEnvironment
 TableEnvironment.createStatementSet()
 TableEnvironment.createTable(String, TableDescriptor)
+TableEnvironment.createFunction(...);
+TableEnvironment.dropFunction(...);
 TableEnvironment.executeSql(String)
 TableEnvironment.explainSql(String)
 TableEnvironment.from(String)
@@ -654,7 +683,7 @@ TableResult.print()
 TableConfig.set(...)
 
 // Expressions
-Expressions.* (except for call())
+Expressions.*
 
 // Others
 TableDescriptor.*
