@@ -45,7 +45,7 @@ public class Example_10_StructuredObjects {
         // 'Interaction(amount DOUBLE)' are treated as incompatible types despite having
         // identical schemas, preventing accidental data mixing.
 
-        // Given a table with 2 rows:
+        // Given a table with 3 rows:
         Table valuesTable =
                 env.fromValues(
                                 row("Alice", 37, LocalDateTime.of(2003, 3, 3, 16, 23, 20)),
@@ -192,7 +192,7 @@ public class Example_10_StructuredObjects {
         }
     }
 
-    /** * A user-defined function that takes a Structured Object and returns a new nested one. */
+    /** A user-defined function that takes a Structured Object and returns a new nested one. */
     public static class ScoringEventEnricher extends ScalarFunction {
 
         public EnrichedScoringEvent eval(ScoringEvent event) {
@@ -208,12 +208,8 @@ public class Example_10_StructuredObjects {
             enriched.normalizedName =
                     (event.name != null) ? event.name.toUpperCase(Locale.ROOT) : "UNKNOWN";
 
-            // Logic: Score must be positive to be valid
-            if (event.score != null && event.score >= 0) {
-                enriched.isValid = true;
-            } else {
-                enriched.isValid = false;
-            }
+            // Score must be positive to be valid
+            enriched.isValid = event.score != null && event.score >= 0;
 
             return enriched;
         }
