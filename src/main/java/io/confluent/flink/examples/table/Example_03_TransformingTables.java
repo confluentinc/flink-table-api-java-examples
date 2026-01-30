@@ -14,6 +14,7 @@ import static org.apache.flink.table.api.Expressions.withAllColumns;
 /** A table program example that demos how to transform data with the {@link Table} object. */
 public class Example_03_TransformingTables {
 
+    // All logic is defined in a main() method. It can run both in an IDE or CI/CD system.
     public static void main(String[] args) {
         EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
         TableEnvironment env = TableEnvironment.create(settings);

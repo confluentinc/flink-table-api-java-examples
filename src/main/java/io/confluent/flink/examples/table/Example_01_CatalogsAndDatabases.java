@@ -8,6 +8,7 @@ import org.apache.flink.table.api.TableEnvironment;
 /** A table program example to interact with catalogs and databases. */
 public class Example_01_CatalogsAndDatabases {
 
+    // All logic is defined in a main() method. It can run both in an IDE or CI/CD system.
     public static void main(String[] args) {
         EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
         TableEnvironment env = TableEnvironment.create(settings);

@@ -39,6 +39,7 @@ public class Example_05_TablePipelines {
     static final String TARGET_TABLE1 = "PricePerProduct";
     static final String TARGET_TABLE2 = "PricePerCustomer";
 
+    // All logic is defined in a main() method. It can run both in an IDE or CI/CD system.
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
         TableEnvironment env = TableEnvironment.create(settings);

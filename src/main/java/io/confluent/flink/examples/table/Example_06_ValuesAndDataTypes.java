@@ -25,6 +25,7 @@ import static org.apache.flink.table.api.Expressions.row;
 /** A table program example to create mock data. */
 public class Example_06_ValuesAndDataTypes {
 
+    // All logic is defined in a main() method. It can run both in an IDE or CI/CD system.
     public static void main(String[] args) {
         EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
         TableEnvironment env = TableEnvironment.create(settings);

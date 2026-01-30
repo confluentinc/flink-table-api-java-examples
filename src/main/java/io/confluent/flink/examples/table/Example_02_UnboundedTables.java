@@ -12,6 +12,7 @@ import static org.apache.flink.table.api.Expressions.$;
 /** A table program example that illustrates bounded and unbounded statements. */
 public class Example_02_UnboundedTables {
 
+    // All logic is defined in a main() method. It can run both in an IDE or CI/CD system.
     public static void main(String[] args) {
         EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
         TableEnvironment env = TableEnvironment.create(settings);
