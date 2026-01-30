@@ -70,6 +70,7 @@ public class Example_08_IntegrationAndDeployment {
     static final String SQL =
             "SELECT brand, COUNT(*) AS vendors FROM ProductsMock %s GROUP BY brand";
 
+    // All logic is defined in a main() method. It can run both in an IDE or CI/CD system.
     public static void main(String[] args) throws Exception {
         if (args.length == 0) {
             throw new IllegalArgumentException(
