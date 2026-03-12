@@ -526,7 +526,7 @@ ConfluentTools.collectMaterialized(table);
 ConfluentTools.printMaterialized(table);
 ```
 
-### `ConfluentTools.getStatementName` / `ConfluentTools.stopStatement` / `ConfluentTools.deleteStatement`
+#### `ConfluentTools.getStatementName` / `ConfluentTools.stopStatement` / `ConfluentTools.deleteStatement`
 
 Additional lifecycle methods are available to control statements on Confluent Cloud after they have been submitted.
 
@@ -539,8 +539,50 @@ ConfluentTools.stopStatement(tableResult);
 // Based on statement name
 // Stop a running statement
 ConfluentTools.stopStatement(env, "table-api-2024-03-21-150457-36e0dbb2e366-sql");
-// Delete the statement entirely from the system
+// Deletes the statement entirely from the system
 ConfluentTools.deleteStatement(env, "table-api-2024-03-21-150457-36e0dbb2e366-sql");
+```
+
+#### `ConfluentTools.getStatementHandle`
+
+Returns a `StatementHandle` to manage a submitted Flink SQL statement on Confluent Cloud.
+
+The `StatementHandle` class provides a convenient way to control the lifecycle of statements and
+retrieve additional information about them. It offers methods to stop, resume, delete statements,
+and retrieve warnings.
+
+```java
+// From TableResult object
+TableResult tableResult = env.executeSql("SELECT * FROM examples.marketplace.customers");
+StatementHandle handle = ConfluentTools.getStatementHandle(tableResult);
+
+// From statement name
+StatementHandle handle = ConfluentTools.getStatementHandle(env, "table-api-2024-03-21-150457-36e0dbb2e366-sql");
+```
+
+Once you have a `StatementHandle`, you can perform various operations:
+
+```java
+// Get the statement name
+String name = handle.getName();
+
+// Stop the statement execution
+handle.stop();
+
+// Resume the statement execution from a previously stopped statement
+handle.resume();
+
+// Delete the statement entirely from the system
+handle.delete();
+
+// Retrieve warnings associated with this statement
+List<StatementWarning> warnings = handle.getWarnings();
+for (StatementWarning warning : warnings) {
+    System.out.println(warning.getSeverity() + ": " + warning.getMessage());
+}
+
+// Get the raw OpenAPI SqlV1Statement response for detailed information
+SqlV1Statement sqlStatement = handle.getSqlV1Statement();
 ```
 
 ### Confluent Table Descriptor
@@ -582,7 +624,6 @@ The following feature are currently not supported:
 - Restrictions coming from Confluent Cloud
     - custom connectors/formats
     - processing time operations
-    - structured data types
     - many configuration options
     - limited SQL syntax
     - batch execution mode
@@ -591,7 +632,6 @@ The following feature are currently not supported:
 
 - Both catalog/database must be set or identifiers must be fully qualified. A mixture of setting a current catalog and
   using two-part identifiers can lead to errors.
-- String concatenation with `.plus` leads to errors. Use `Expressions.concat`.
 - Selecting `.rowtime` in windows leads to errors.
 - Using `.limit()` can lead to errors.
 
