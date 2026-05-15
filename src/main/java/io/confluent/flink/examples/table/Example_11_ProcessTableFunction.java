@@ -67,7 +67,8 @@ public class Example_11_ProcessTableFunction {
      *
      * <p>For each user (partitioned by {@code user_id}), it counts incoming clicks and registers a
      * named event-time timer. Each new click replaces the previous timer, resetting the inactivity
-     * clock. When the timer fires (no new clicks within the timeout), an alert is emitted.
+     * clock. When the timer fires (no new clicks within the timeout), an alert is emitted and the
+     * partition's state is cleared so a returning user starts a fresh inactivity window.
      */
     public static class ClickInactivityMonitor
             extends ProcessTableFunction<ClickInactivityMonitor.InactivityAlert> {
@@ -97,10 +98,14 @@ public class Example_11_ProcessTableFunction {
                     "inactivity", timeCtx.time().plus(Duration.ofSeconds(timeoutSeconds)));
         }
 
-        public void onTimer(ClickState state) {
+        public void onTimer(OnTimerContext ctx, ClickState state) {
             InactivityAlert alert = new InactivityAlert();
             alert.clickCount = state.clickCount;
             collect(alert);
+
+            // Reset the partition: drop the click counter (and any leftover timers) so a returning
+            // user starts a new inactivity window instead of retaining state indefinitely.
+            ctx.clearAll();
         }
     }
 }
