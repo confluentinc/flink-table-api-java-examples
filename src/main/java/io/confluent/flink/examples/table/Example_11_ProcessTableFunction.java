@@ -62,6 +62,11 @@ public class Example_11_ProcessTableFunction {
                 .print();
     }
 
+    /** Output POJO. The framework adds the user_id partition key and rowtime automatically. */
+    public static class InactivityAlert {
+        public int clickCount;
+    }
+
     /**
      * A ProcessTableFunction that detects user inactivity based on click events.
      *
@@ -70,11 +75,6 @@ public class Example_11_ProcessTableFunction {
      * clock. When the timer fires (no new clicks within the timeout), an alert is emitted and the
      * partition's state is cleared so a returning user starts a fresh inactivity window.
      */
-    /** Output POJO. The framework adds the user_id partition key and rowtime automatically. */
-    public static class InactivityAlert {
-        public int clickCount;
-    }
-
     public static class ClickInactivityMonitor extends ProcessTableFunction<InactivityAlert> {
 
         /** Per-user state. */
