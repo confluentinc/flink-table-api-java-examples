@@ -70,8 +70,7 @@ public class Example_11_ProcessTableFunction {
      * clock. When the timer fires (no new clicks within the timeout), an alert is emitted and the
      * partition's state is cleared so a returning user starts a fresh inactivity window.
      */
-    public static class ClickInactivityMonitor
-            extends ProcessTableFunction<ClickInactivityMonitor.InactivityAlert> {
+    public static class ClickInactivityMonitor extends ProcessTableFunction<InactivityAlert> {
 
         /** Output POJO. The framework adds the user_id partition key and rowtime automatically. */
         public static class InactivityAlert {
@@ -83,11 +82,12 @@ public class Example_11_ProcessTableFunction {
             public int clickCount = 0;
         }
 
+        // The eval() method defines the function's signature and is called for every input row.
         public void eval(
                 Context ctx,
                 @StateHint ClickState state,
                 @ArgumentHint({SET_SEMANTIC_TABLE, REQUIRE_ON_TIME}) Row input,
-                Integer timeoutSeconds) {
+                int timeoutSeconds) {
 
             state.clickCount++;
 
@@ -98,14 +98,16 @@ public class Example_11_ProcessTableFunction {
                     "inactivity", timeCtx.time().plus(Duration.ofSeconds(timeoutSeconds)));
         }
 
+        // The onTimer() method is called when a timer fires.
         public void onTimer(OnTimerContext ctx, ClickState state) {
             InactivityAlert alert = new InactivityAlert();
             alert.clickCount = state.clickCount;
             collect(alert);
 
-            // Reset the partition: drop the click counter (and any leftover timers) so a returning
-            // user starts a new inactivity window instead of retaining state indefinitely.
-            ctx.clearAll();
+            // Reset the partition so a returning user starts a new inactivity window instead of
+            // retaining the click counter indefinitely. The fired timer is already consumed, so
+            // only state needs clearing.
+            ctx.clearAllState();
         }
     }
 }
