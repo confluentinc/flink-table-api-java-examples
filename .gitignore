@@ -5,3 +5,4 @@ target/
 *.DS_Store
 cloud.properties
 dependency-reduced-pom.xml
+*.env

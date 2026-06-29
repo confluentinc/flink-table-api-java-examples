@@ -1,0 +1,70 @@
+# EXAMPLE WORKFLOW - copy this file to .github/workflows/ in your own repository.
+# It lives in workflows-examples/ because this examples repository does not manage
+# statements in a real Confluent Cloud environment. It runs the deployment JAR with one
+# of the plugin's built-in lifecycle actions (list/describe/resume/stop/delete) chosen by
+# the operator. See the README's CI/CD section for the deployment model and the required
+# secrets. The application name defaults to the one deploy.yml uses; override it per run.
+name: Manage Flink Statements
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - list
+          - describe
+          - resume
+          - stop
+          - delete
+      application-name:
+        description: 'Application the statement belongs to (set at deploy time)'
+        required: true
+        default: marketplace-analytics
+      statement-name:
+        description: 'Statement name set at deploy time, e.g. vendors-per-brand (leave empty for list to show all)'
+        required: false
+
+env:
+  CLOUD_PROVIDER: ${{ secrets.CLOUD_PROVIDER }}
+  CLOUD_REGION: ${{ secrets.CLOUD_REGION }}
+  FLINK_API_KEY: ${{ secrets.FLINK_API_KEY }}
+  FLINK_API_SECRET: ${{ secrets.FLINK_API_SECRET }}
+  ORG_ID: ${{ secrets.ORG_ID }}
+  ENV_ID: ${{ secrets.ENV_ID }}
+  COMPUTE_POOL_ID: ${{ secrets.COMPUTE_POOL_ID }}
+
+jobs:
+  manage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: maven
+
+      - name: Build
+        run: ./mvnw -B --no-transfer-progress -DskipTests package
+
+      - name: Run lifecycle action
+        # Inputs are passed via env, not interpolated into the script, so free-text input
+        # cannot inject shell commands. The command is built as an array so each argument
+        # stays a single word regardless of its content.
+        env:
+          ACTION: ${{ inputs.action }}
+          APPLICATION_NAME: ${{ inputs.application-name }}
+          STATEMENT_NAME: ${{ inputs.statement-name }}
+        # --statement-name is added only when set (list then covers all statements).
+        # --wait makes stop/resume/delete block until the target phase so the exit code
+        # reflects the outcome; list and describe ignore it.
+        run: |
+          args=("$ACTION" --application-name "$APPLICATION_NAME" --wait)
+          if [ -n "$STATEMENT_NAME" ]; then
+            args+=(--statement-name "$STATEMENT_NAME")
+          fi
+          java -jar target/flink-table-api-java-examples-1.0.jar "${args[@]}"
