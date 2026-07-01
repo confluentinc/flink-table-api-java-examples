@@ -6,6 +6,12 @@
 # secrets. The application name defaults to the one deploy.yml uses; override it per run.
 name: Manage Flink Statements
 
+# Name each run after the action and target so the runs list is distinguishable at a glance
+# (e.g. "stop on marketplace-analytics / vendors-per-brand"). The statement-name part is only
+# added when set, so "list" (which takes no statement) shows no dangling separator. Hyphenated
+# inputs use bracket syntax because a dot would be parsed as subtraction.
+run-name: "${{ inputs.action }} on ${{ inputs['application-name'] }}${{ inputs['statement-name'] != '' && format(' / {0}', inputs['statement-name']) || '' }}"
+
 on:
   workflow_dispatch:
     inputs:

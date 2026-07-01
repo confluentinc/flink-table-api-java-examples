@@ -5,6 +5,11 @@
 # required secrets.
 name: Deploy Table API Program
 
+# Show what this pipeline deploys in the runs list. run-name can only read the github and inputs
+# contexts, not env, so the application and statement names are repeated here; keep them in sync
+# with APPLICATION_NAME / STATEMENT_NAME below.
+run-name: "Deploy marketplace-analytics / vendors-per-brand"
+
 on:
   # Choose the trigger(s) that fit your deployment strategy. This template can be run
   # manually from the GitHub Actions UI; uncomment the others to deploy automatically,
