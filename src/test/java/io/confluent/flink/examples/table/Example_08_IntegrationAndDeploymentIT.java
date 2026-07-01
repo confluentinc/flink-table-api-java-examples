@@ -10,6 +10,7 @@ import org.apache.flink.table.api.TableResult;
 import org.apache.flink.types.Row;
 import org.apache.flink.util.CloseableIterator;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -70,10 +71,15 @@ class Example_08_IntegrationAndDeploymentIT {
         // The LIKE clause is very convenient for this task which is why we use SQL here.
         // Since we use little data, a bucket of 1 is important to satisfy the
         // `scan.bounded.mode` during testing.
+        // The fill statement writes with exactly-once semantics, so records only become visible to
+        // read-committed consumers once a checkpoint commits (~1 min on Confluent Cloud). This test
+        // reads the freshly filled data well within that interval, so it reads uncommitted records;
+        // committed durability is not what this pipeline test verifies.
         env.executeSql(
                 String.format(
                         "CREATE TABLE IF NOT EXISTS `%s`\n"
                                 + "DISTRIBUTED INTO 1 BUCKETS\n"
+                                + "WITH ('kafka.consumer.isolation-level' = 'read-uncommitted')\n"
                                 + "LIKE `examples`.`marketplace`.`products` (EXCLUDING OPTIONS)",
                         SOURCE_TABLE));
 
@@ -185,5 +191,14 @@ class Example_08_IntegrationAndDeploymentIT {
         // The examples data generator produces a fixed set of brands. Checking for a known one
         // guards against reading the wrong data, not just producing plausible-looking rows.
         assertThat(rows).extracting(row -> row.<String>getFieldAs("brand")).contains("Apple");
+    }
+
+    @AfterAll
+    // Drop the mock table so the run does not leak a topic into the environment. Runs even when a
+    // test fails, so a failed run cleans up after itself too.
+    static void dropMockTable() {
+        if (env != null) {
+            env.executeSql(String.format("DROP TABLE IF EXISTS `%s`", SOURCE_TABLE));
+        }
     }
 }
