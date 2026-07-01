@@ -19,7 +19,7 @@
         <log4j.version>2.26.0</log4j.version>
         <spotless.version>3.7.0</spotless.version>
         <junit.version>5.12.2</junit.version>
-        <assertj.version>3.27.3</assertj.version>
+        <assertj.version>3.27.7</assertj.version>
         <surefire.version>3.5.4</surefire.version>
     </properties>
 
