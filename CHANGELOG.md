@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-07-01
+
+### Features and Fixes
+
+- Added `log4j2.properties` with default logging configuration.
+
 ## 2026-04-15
 
 ### Features and Fixes
