@@ -53,7 +53,7 @@ jobs:
         # pipeline restarts from its configured source offsets without resuming prior state
         # (see the README CI/CD section).
         run: >
-          java -jar target/flink-table-api-java-examples-1.0.jar
+          java -cp target/flink-table-api-java-examples-1.0.jar io.confluent.flink.examples.table.Example_08_IntegrationAndDeployment
           --statement-name "$STATEMENT_NAME"
           --application-name "$APPLICATION_NAME"
           --sql.current-catalog "$TARGET_CATALOG"
@@ -64,6 +64,6 @@ jobs:
         # Submitting a background statement returns once Confluent Cloud accepts it, so
         # list reports the statement and its phase for visibility in the log.
         run: >
-          java -jar target/flink-table-api-java-examples-1.0.jar
+          java -cp target/flink-table-api-java-examples-1.0.jar io.confluent.flink.examples.table.Example_08_IntegrationAndDeployment
           list
           --application-name "$APPLICATION_NAME"

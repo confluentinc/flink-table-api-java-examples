@@ -67,4 +67,4 @@ jobs:
           if [ -n "$STATEMENT_NAME" ]; then
             args+=(--statement-name "$STATEMENT_NAME")
           fi
-          java -jar target/flink-table-api-java-examples-1.0.jar "${args[@]}"
+          java -cp target/flink-table-api-java-examples-1.0.jar io.confluent.flink.examples.table.Example_08_IntegrationAndDeployment "${args[@]}"
