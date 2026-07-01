@@ -10,14 +10,17 @@
     <name>Apache Flink® Table API Java Examples on Confluent Cloud</name>
 
     <properties>
-        <flink.version>2.2.1</flink.version>
-        <confluent-plugin.version>2.2-24</confluent-plugin.version>
+        <flink.version>2.3.0</flink.version>
+        <confluent-plugin.version>2.3-1</confluent-plugin.version>
         <target.java.version>17</target.java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>${target.java.version}</maven.compiler.source>
         <maven.compiler.target>${target.java.version}</maven.compiler.target>
         <log4j.version>2.26.0</log4j.version>
         <spotless.version>3.7.0</spotless.version>
+        <junit.version>5.12.2</junit.version>
+        <assertj.version>3.27.3</assertj.version>
+        <surefire.version>3.5.4</surefire.version>
     </properties>
 
     <repositories>
@@ -51,6 +54,40 @@
             <groupId>io.confluent.flink</groupId>
             <artifactId>confluent-flink-table-api-java-plugin</artifactId>
             <version>${confluent-plugin.version}</version>
+        </dependency>
+
+        <!-- Test dependencies for running table programs locally without Confluent Cloud
+             connectivity. The Apache Flink planner, runtime, and an embedded mini-cluster
+             (via flink-clients) execute pipeline logic on mock data in unit tests. -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-planner-loader</artifactId>
+            <version>${flink.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-runtime</artifactId>
+            <version>${flink.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-clients</artifactId>
+            <version>${flink.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>${assertj.version}</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- Add logging framework, to produce console output when running in the IDE. -->
@@ -114,6 +151,45 @@
                         <phase>validate</phase>
                         <goals>
                             <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Unit tests (mvn test) run table programs locally on Apache Flink.
+                 The Confluent plugin and the Apache Flink planner both register their
+                 Executor/Planner factories under the identifier 'default', so they cannot share a
+                 runtime classpath. Unit tests therefore exclude the Confluent plugin.
+                 NOTE: IDEs ignore this exclusion; run tests via ./mvnw test instead. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire.version}</version>
+                <configuration>
+                    <classpathDependencyExcludes>
+                        <classpathDependencyExclude>io.confluent.flink:confluent-flink-table-api-java-plugin</classpathDependencyExclude>
+                    </classpathDependencyExcludes>
+                </configuration>
+            </plugin>
+
+            <!-- Integration tests (mvn verify, classes named *IT) run against Confluent Cloud
+                 using the Confluent plugin and therefore exclude the Apache Flink planner instead.
+                 They fail fast when no Confluent Cloud credentials are configured; skip them
+                 explicitly with -DskipITs. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${surefire.version}</version>
+                <configuration>
+                    <classpathDependencyExcludes>
+                        <classpathDependencyExclude>org.apache.flink:flink-table-planner-loader</classpathDependencyExclude>
+                    </classpathDependencyExcludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
                         </goals>
                     </execution>
                 </executions>

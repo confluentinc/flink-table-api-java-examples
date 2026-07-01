@@ -90,6 +90,20 @@ public static void main(String[] args) {
   // pipeline.execute().await();
 ```
 
+## Developer Journey
+
+The examples in this repository follow the journey of taking a table program from a first
+experiment all the way to a production deployment:
+
+| Stage | What you do | Where to look |
+|-------|-------------|---------------|
+| Get started | Configure a connection to Confluent Cloud and run a first program | `Example_00` - `Example_02`, [Getting Started](#getting-started) |
+| Build | Transform tables, build pipelines, work with data types, UDFs, and structured objects | `Example_03` - `Example_07`, `Example_09` - `Example_11`, `TableProgramTemplate` |
+| Test locally | Run unit tests on mock data, without Confluent Cloud connectivity | `src/test/java/`, [Testing Table Programs](#testing-table-programs) |
+| Test on Confluent Cloud | Run integration tests against the real service | `Example_08_IntegrationAndDeploymentIT`, [Testing Table Programs](#testing-table-programs) |
+| Deploy | Submit statements with deterministic names from a CI/CD pipeline | `Example_08_IntegrationAndDeployment`, [CI/CD with GitHub Actions](#cicd-with-github-actions) |
+| Operate | List, describe, stop, resume, and delete deployed statements | `.github/workflows-examples/manage.yml` |
+
 ## Getting Started
 
 ### Prerequisites
@@ -455,6 +469,105 @@ ConfluentSettings settings3 = ConfluentSettings.newBuilder()
     // Other required settings...
     .build();
 ```
+
+## Testing Table Programs
+
+Table programs can be tested in three tiers, from fastest feedback to highest fidelity:
+
+1. **Unit tests on plain logic.** UDFs and other business logic are plain Java classes and can be
+   tested with JUnit alone: no Apache Flink, no Confluent Cloud connectivity, and no artifact
+   upload required. See `Example_09_FunctionsTest`.
+2. **Local pipeline tests on Apache Flink.** Pipeline logic that is structured as
+   a function from input `Table`s to an output `Table` (see `VendorsPerBrand` in
+   `Example_08_IntegrationAndDeployment`) can be executed locally with mock data from
+   `fromValues()`, without Confluent Cloud connectivity. See
+   `Example_08_IntegrationAndDeploymentTest` and run with `./mvnw test`.
+3. **Integration tests against Confluent Cloud.** The same pipeline logic runs on the real
+   service with the exact Confluent semantics, on a Kafka-backed table that is made bounded with
+   dynamic options. See `Example_08_IntegrationAndDeploymentIT` and run with `./mvnw verify`.
+   These tests require the connection environment variables (see
+   [Via Environment Variables](#via-environment-variables)) plus `TARGET_CATALOG` (the name of
+   your Confluent Cloud environment) and `TARGET_DATABASE` (the name of a Kafka cluster with
+   write access), and fail fast when any are missing, so a CI pipeline cannot silently skip its
+   verification step and still report success. To build without Confluent Cloud credentials on
+   purpose, skip them explicitly: `./mvnw verify -DskipITs`.
+
+### How local testing works
+
+The Confluent plugin executes all statements on Confluent Cloud; it does not run them locally.
+Local tests therefore run on Apache Flink (planner, runtime, and an embedded mini-cluster), which
+this project adds as test-scoped dependencies.
+
+The plugin and the Apache Flink planner cannot share a runtime classpath: both register their
+Executor and Planner factories under the identifier `default`, and `TableEnvironment.create(...)` fails with
+`Multiple factories for identifier 'default'` if both are present. This project resolves the
+conflict with classpath exclusions in the `pom.xml`:
+
+- `./mvnw test` (surefire) excludes the Confluent plugin, so unit tests run on Apache Flink.
+- `./mvnw verify` (failsafe, test classes named `*IT`) excludes the Apache Flink planner, so
+  integration tests run against Confluent Cloud.
+
+Keep pipeline logic free of `io.confluent.flink.plugin` imports so that unit tests can execute it
+locally.
+
+NOTE: IDEs ignore these classpath exclusions, so run the tests via `./mvnw test` and
+`./mvnw verify` instead of the IDE's test runner. To use the IDE's test runner anyway, replicate
+the exclusion in the test's run configuration (IntelliJ IDEA: Modify options -> Modify classpath ->
+Exclude): exclude the `confluent-flink-table-api-java-plugin` JAR for unit tests, or the
+`flink-table-planner-loader` JAR for integration tests. For production projects, the cleaner
+structure is a multi-module build: one module contains the pipeline logic with only
+`flink-table-api-java` and the Apache Flink test dependencies, and another module adds the
+Confluent plugin and the deployment entrypoints.
+
+### Local testing limitations
+
+Running locally on Apache Flink is not identical to Confluent Cloud:
+
+- The `$rowtime` system column and other Confluent system columns do not exist locally.
+- There is no local catalog mirroring your Confluent Cloud schemas. Mock tables are declared
+  manually with `fromValues()` and must be kept in sync with the real schemas.
+- Confluent-specific SQL syntax (such as `DISTRIBUTED INTO ... BUCKETS`) and Confluent-provided
+  functions are not available.
+
+Local tests give fast feedback on transformation logic; integration tests against Confluent Cloud
+remain the source of truth.
+
+## CI/CD with GitHub Actions
+
+The repository contains workflows that show how a table program moves through a CI/CD pipeline:
+
+- `.github/workflows/ci.yml` runs in this repository on every pull request: code format check,
+  compilation, local unit tests, and the fat JAR build. It requires no Confluent Cloud
+  credentials.
+- `.github/workflows-examples/deploy.yml` is a template for your own repository: it runs the
+  integration tests against Confluent Cloud and then deploys the program by running its `main()`
+  method with `--statement-name`, `--application-name`, and `--on-conflict replace`. The statement
+  and application names are deployment configuration passed by the pipeline (not hardcoded in the
+  program), so the same name is used for deployment and for management; the application name is
+  prefixed to the statement name on submission (e.g. `marketplace-analytics-vendors-per-brand`).
+  Re-running with unchanged code is idempotent, and a changed pipeline replaces the existing
+  statement under the same name.
+
+  `--on-conflict replace` deletes the existing statement and submits a new one: the new statement
+  starts from its configured source offsets and does not resume the previous statement's state.
+  For stateless pipelines (filters, projections, routing) this has no effect on results. For
+  stateful pipelines (aggregations, joins, deduplication, including the aggregation in this
+  example) the new statement rebuilds its state by reprocessing from the configured start
+  position, so choose the redeploy timing and the source startup mode accordingly.
+- `.github/workflows-examples/manage.yml` is a template for explicit lifecycle operations. It runs
+  the same deployment JAR with one of the plugin's built-in actions (`list`, `describe`, `stop`,
+  `resume`, `delete`) as the first argument; the plugin executes the action instead of deploying,
+  so no separate program is needed. Deployment and lifecycle management are separate concerns;
+  removing code does not imply that a running statement should be stopped or deleted.
+
+The workflows authenticate via the environment variables described in
+[Via Environment Variables](#via-environment-variables), mapped from GitHub Actions secrets. The
+target environment and Kafka cluster are selected with the `sql.current-catalog` and
+`sql.current-database` configuration options: the deploy workflow passes them on the command line
+(from the `TARGET_CATALOG` and `TARGET_DATABASE` secrets), and the integration tests read those
+same variables. Because they are deployment configuration rather than source constants,
+staging-to-production promotion is a matter of running the same deploy job against different GitHub
+environments, each providing its own secrets and protection rules.
 
 ## Documentation for Confluent Utilities
 

@@ -1,0 +1,74 @@
+# EXAMPLE WORKFLOW - copy this file to .github/workflows/ in your own repository.
+# It lives in workflows-examples/ because this examples repository does not deploy to a
+# real Confluent Cloud environment. It tests, deploys Example_08_IntegrationAndDeployment,
+# then lists the result. See the README's CI/CD section for the deployment model and the
+# required secrets.
+name: Deploy Table API Program
+
+# Show what this pipeline deploys in the runs list. run-name can only read the github and inputs
+# contexts, not env, so the application and statement names are repeated here; keep them in sync
+# with APPLICATION_NAME / STATEMENT_NAME below.
+run-name: "Deploy marketplace-analytics / vendors-per-brand"
+
+on:
+  # Choose the trigger(s) that fit your deployment strategy. This template can be run
+  # manually from the GitHub Actions UI; uncomment the others to deploy automatically,
+  # for example on a merge to your main branch or on a release tag.
+  workflow_dispatch:
+  # push:
+  #   branches: [main]
+  # push:
+  #   tags: ['v*']
+
+env:
+  CLOUD_PROVIDER: ${{ secrets.CLOUD_PROVIDER }}
+  CLOUD_REGION: ${{ secrets.CLOUD_REGION }}
+  FLINK_API_KEY: ${{ secrets.FLINK_API_KEY }}
+  FLINK_API_SECRET: ${{ secrets.FLINK_API_SECRET }}
+  ORG_ID: ${{ secrets.ORG_ID }}
+  ENV_ID: ${{ secrets.ENV_ID }}
+  COMPUTE_POOL_ID: ${{ secrets.COMPUTE_POOL_ID }}
+  TARGET_CATALOG: ${{ secrets.TARGET_CATALOG }}
+  TARGET_DATABASE: ${{ secrets.TARGET_DATABASE }}
+  # Fixed here because they define what this pipeline deploys (and a push trigger cannot
+  # supply inputs); the manage workflow takes them as inputs instead.
+  APPLICATION_NAME: marketplace-analytics
+  STATEMENT_NAME: vendors-per-brand
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: maven
+
+      - name: Run local unit tests and integration tests against Confluent Cloud
+        run: ./mvnw -B --no-transfer-progress verify
+
+      - name: Deploy to Confluent Cloud
+        # --sql.current-catalog / --sql.current-database select the target environment and Kafka
+        # cluster (they are ordinary configuration options, like the connection settings).
+        # --on-conflict replace redeploys a changed pipeline under the same name; it requires
+        # --application-name. "Replace" deletes and recreates the statement, so a stateful
+        # pipeline restarts from its configured source offsets without resuming prior state
+        # (see the README CI/CD section).
+        run: >
+          java -cp target/flink-table-api-java-examples-1.0.jar io.confluent.flink.examples.table.Example_08_IntegrationAndDeployment
+          --statement-name "$STATEMENT_NAME"
+          --application-name "$APPLICATION_NAME"
+          --sql.current-catalog "$TARGET_CATALOG"
+          --sql.current-database "$TARGET_DATABASE"
+          --on-conflict replace
+
+      - name: Verify the deployed statement
+        # Submitting a background statement returns once Confluent Cloud accepts it, so
+        # list reports the statement and its phase for visibility in the log.
+        run: >
+          java -cp target/flink-table-api-java-examples-1.0.jar io.confluent.flink.examples.table.Example_08_IntegrationAndDeployment
+          list
+          --application-name "$APPLICATION_NAME"
