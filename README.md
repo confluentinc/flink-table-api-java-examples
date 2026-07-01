@@ -2,6 +2,51 @@
 
 This repository contains examples for running Apache Flink's Table API on Confluent Cloud.
 
+## Table of Contents
+
+- [Introduction to Table API for Java](#introduction-to-table-api-for-java)
+- [Table API on Confluent Cloud](#table-api-on-confluent-cloud)
+  - [Motivating Example](#motivating-example)
+- [Developer Journey](#developer-journey)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Run Examples](#run-examples)
+  - [Configure the cloud.properties File](#configure-the-cloudproperties-file)
+  - [Table API Playground using JShell](#table-api-playground-using-jshell)
+  - [How to Continue](#how-to-continue)
+- [Configuration](#configuration)
+  - [Via Properties File](#via-properties-file)
+  - [Via Command-Line arguments](#via-command-line-arguments)
+  - [Via Code](#via-code)
+  - [Via Environment Variables](#via-environment-variables)
+  - [Configuration Options](#configuration-options)
+  - [Authentication](#authentication)
+  - [Endpoint Configuration](#endpoint-configuration)
+  - [client.endpoint-template](#clientendpoint-template)
+  - [client.artifact-endpoint-template](#clientartifact-endpoint-template)
+  - [client.rest-endpoint (Discouraged)](#clientrest-endpoint-discouraged)
+  - [Relationship and Default Behavior](#relationship-and-default-behavior)
+  - [Examples](#examples)
+- [Testing Table Programs](#testing-table-programs)
+  - [How local testing works](#how-local-testing-works)
+  - [Local testing limitations](#local-testing-limitations)
+  - [Process Table Function Test Harness](#process-table-function-test-harness)
+- [CI/CD Integration](#cicd-integration)
+  - [Overview](#overview)
+  - [Usage](#usage)
+  - [Examples](#examples-1)
+  - [Exit Codes](#exit-codes)
+  - [On-Conflict Behavior](#on-conflict-behavior)
+  - [Workflows in this repository](#workflows-in-this-repository)
+- [Documentation for Confluent Utilities](#documentation-for-confluent-utilities)
+  - [Confluent Tools](#confluent-tools)
+  - [Confluent Table Descriptor](#confluent-table-descriptor)
+- [Known Limitations](#known-limitations)
+  - [Unsupported by Table API Plugin](#unsupported-by-table-api-plugin)
+  - [Issues in Open Source Flink](#issues-in-open-source-flink)
+  - [Supported API](#supported-api)
+- [Support](#support)
+
 ## Introduction to Table API for Java
 
 The [Table API](https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/table/overview/) enables a programmatic
@@ -273,8 +318,8 @@ client.cloud=aws
 client.region=us-east-1
 
 # Access & compute resources
-client.flink-api-key=key
-client.flink-api-secret=secret
+client.global-api-key=key
+client.global-api-secret=secret
 client.organization-id=b0b21724-4586-4a07-b787-d0bb5aacbf87
 client.environment-id=env-z3y2x1
 client.compute-pool-id=lfcp-8m03rm
@@ -299,8 +344,8 @@ Pass all options (or some options) via command-line arguments:
 java -jar my-table-program.jar \
   --cloud aws \
   --region us-east-1 \
-  --flink-api-key key \
-  --flink-api-secret secret \
+  --global-api-key key \
+  --global-api-secret secret \
   --organization-id b0b21724-4586-4a07-b787-d0bb5aacbf87 \
   --environment-id env-z3y2x1 \
   --compute-pool-id lfcp-8m03rm
@@ -322,8 +367,8 @@ Pass all options (or some options) in code:
 ConfluentSettings settings = ConfluentSettings.newBuilder()
     .setCloud("aws")
     .setRegion("us-east-1")
-    .setFlinkApiKey("key")
-    .setFlinkApiSecret("secret")
+    .setGlobalApiKey("key")
+    .setGlobalApiSecret("secret")
     .setOrganizationId("b0b21724-4586-4a07-b787-d0bb5aacbf87")
     .setEnvironmentId("env-z3y2x1")
     .setComputePoolId("lfcp-8m03rm")
@@ -337,8 +382,8 @@ Pass all options (or some options) as variables:
 ```bash
 export CLOUD_PROVIDER="aws"
 export CLOUD_REGION="us-east-1"
-export FLINK_API_KEY="key"
-export FLINK_API_SECRET="secret"
+export GLOBAL_API_KEY="key"
+export GLOBAL_API_SECRET="secret"
 export ORG_ID="b0b21724-4586-4a07-b787-d0bb5aacbf87"
 export ENV_ID="env-z3y2x1"
 export COMPUTE_POOL_ID="lfcp-8m03rm"
@@ -608,7 +653,312 @@ Running locally on Apache Flink is not identical to Confluent Cloud:
 Local tests give fast feedback on transformation logic; integration tests against Confluent Cloud
 remain the source of truth.
 
-## CI/CD with GitHub Actions
+### Process Table Function Test Harness
+
+The `ProcessTableFunctionTestHarness` is available for unit testing Process Table Functions (PTFs)
+before this capability is released in an official Apache Flink release. The harness ships with
+`confluent-flink-table-api-java-plugin`, so depending on the plugin (as this project already does)
+is enough to use it in your tests.
+
+For guidance on how to use the `ProcessTableFunctionTestHarness` for testing PTFs, please consult the
+[nightly documentation](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/functions/ptfs/#testing-process-table-functions).
+
+## CI/CD Integration
+
+The Confluent Flink plugin supports lifecycle management actions for seamless integration into CI/CD pipelines.
+This allows you to manage Flink statements directly from your deployment scripts without writing SQL or using the API.
+
+### Overview
+
+Instead of managing statement lifecycle programmatically or through SQL, you can invoke your JAR with an action instruction.
+This is particularly useful for:
+
+- **Continuous Deployment**: Manage statement lifecycle before deploying new versions
+- **Resource Cleanup**: Clean up statements as part of environment teardown
+- **Rollback Procedures**: Handle statements during rollback workflows
+- **Testing Pipelines**: Clean up test statements after integration tests
+
+### Usage
+
+Actions are specified as the first argument that is not prefixed with `--` when running your JAR.
+Only one action is allowed per execution.
+
+**Important**: To use this feature, your Table API application must parse command-line arguments using
+`ConfluentSettings.fromArgs(args)` or `ConfluentSettings.newBuilderFromArgs(args)` in its `main()` method.
+When an action is detected, it will be executed and the JVM will terminate early (via `System.exit()`),
+preventing the rest of your application logic from running.
+
+```java
+public static void main(String[] args) {
+    // This will automatically detect and execute actions if present
+    // If an action is specified, the program will exit here
+    EnvironmentSettings settings = ConfluentSettings.fromArgs(args);
+    TableEnvironment env = TableEnvironment.create(settings);
+
+    // Your application logic here (only runs if no action was specified)
+    // ...
+}
+```
+
+To disable the automatic exit behavior (e.g., for testing), set the internal configuration option `client.action.skip-exit=true`.
+The implementation must catch a `ActionCompletedException` in case of errors.
+
+#### Basic Syntax
+
+```bash
+java -jar my-table-program.jar <action> [options]
+```
+
+Where `<action>` is one of:
+- `list` - Lists statements belonging to the application or a specific statement
+- `describe` - Shows full JSON details for a specific statement
+- `resume` - Resumes a stopped statement
+- `stop` - Stops a running statement
+- `delete` - Deletes a statement entirely from the system
+
+#### Required Configuration
+
+When using `describe`, `resume`, `stop` or `delete` actions, you **must** provide a static statement name via one of these methods:
+
+1. **Command-line argument:**
+   ```bash
+   java -jar my-table-program.jar stop --statement-name my-query [other options]
+   ```
+
+2. **Environment variable:**
+   ```bash
+   export STATEMENT_NAME="my-query"
+   java -jar my-table-program.jar stop [other options]
+   ```
+
+3. **Properties file:**
+   ```properties
+   # cloud.properties
+   client.statement-name=my-query
+   ```
+
+If an application name is configured, it will be automatically prefixed to the statement name
+(e.g., `my-app-my-query`).
+
+**Note:** The `list` action does **not** require a statement name. When an application name is configured, it will list all statements matching that application name prefix. When no application name is configured, it will list **all statements** in the environment (which may be expensive in shared environments). For CI/CD usage, it is recommended to always configure an application name to scope the listing. Optionally, you can provide a statement name to list only a specific statement. The `describe`, `stop`, and `delete` actions all require a statement name.
+
+#### Waiting for Completion
+
+By default, `resume`, `stop`, and `delete` return as soon as the Confluent Cloud API has accepted the request: the
+statement may still be transitioning in the background. For CI/CD pipelines where the next step depends on the new
+phase being reached, pass `--wait` to block until the action has fully taken effect:
+
+- `resume` waits until the statement reaches `RUNNING`.
+- `stop` waits until the statement reaches `STOPPED`.
+- `delete` waits until the statement does not exist.
+
+Tune the maximum wait by passing a duration directly to `--wait` (e.g. `--wait 10min`, default: `300s`). Durations
+accept values like `30s`, `5min`, or `2h`. If no duration is passed the default timeout will be used. If the target
+phase is not reached before the timeout elapses, the action fails with exit code 1.
+
+The `list` and `describe` actions ignore `--wait`.
+
+### Examples
+
+#### Listing Statements
+
+The `list` action displays all statements associated with your application in a tabular format showing:
+- **Kind**: Always "Statement" (prepared for future resource types)
+- **Name**: The full statement name
+- **Phase**: The current status (e.g., RUNNING, COMPLETED, STOPPED)
+- **Created**: When the statement was created
+
+```bash
+# List all statements for an application
+java -jar marketplace-analytics.jar list \
+  --application-name marketplace-analytics \
+  --cloud aws \
+  --region us-east-1 \
+  --organization-id b0b21724-4586-4a07-b787-d0bb5aacbf87 \
+  --environment-id env-z3y2x1 \
+  --compute-pool-id lfcp-8m03rm \
+  --global-api-key <key> \
+  --global-api-secret <secret>
+```
+
+Example output:
+```
++------------+--------------------------------------------+-----------+---------------------------+
+| Kind       | Name                                       | Phase     | Created                   |
++------------+--------------------------------------------+-----------+---------------------------+
+| Statement  | marketplace-analytics-query-1              | RUNNING   | 2026-05-08T10:30:00Z      |
+| Statement  | marketplace-analytics-query-2              | COMPLETED | 2026-05-08T09:15:00Z      |
+| Statement  | marketplace-analytics-experimental-query   | STOPPED   | 2026-05-07T14:22:00Z      |
++------------+--------------------------------------------+-----------+---------------------------+
+```
+
+```bash
+# List a specific statement
+java -jar marketplace-analytics.jar list \
+  --statement-name marketplace-query \
+  --application-name marketplace-analytics \
+  --cloud aws \
+  --region us-east-1 \
+  --organization-id b0b21724-4586-4a07-b787-d0bb5aacbf87 \
+  --environment-id env-z3y2x1 \
+  --compute-pool-id lfcp-8m03rm \
+  --global-api-key <key> \
+  --global-api-secret <secret>
+```
+
+Example output:
+```
++------------+-----------------------------------------+-----------+---------------------------+
+| Kind       | Name                                    | Phase     | Created                   |
++------------+-----------------------------------------+-----------+---------------------------+
+| Statement  | marketplace-analytics-marketplace-query | RUNNING   | 2026-05-08T10:30:00Z      |
++------------+-----------------------------------------+-----------+---------------------------+
+```
+
+#### Describing a Statement
+
+The `describe` action displays the complete JSON representation of a statement from the Confluent Cloud SQL API (OpenAPI specification). This includes all metadata, status details, configuration, and results.
+
+```bash
+# Describe a specific statement
+java -jar marketplace-analytics.jar describe \
+  --statement-name marketplace-query \
+  --application-name marketplace-analytics \
+  --cloud aws \
+  --region us-east-1 \
+  --organization-id b0b21724-4586-4a07-b787-d0bb5aacbf87 \
+  --environment-id env-z3y2x1 \
+  --compute-pool-id lfcp-8m03rm \
+  --global-api-key <key> \
+  --global-api-secret <secret>
+```
+
+Example output:
+```json
+{
+  "api_version": "sql/v1",
+  "kind": "Statement",
+  "metadata": {
+    "self": "https://api.confluent.cloud/sql/v1/organizations/b0b21724-4586-4a07-b787-d0bb5aacbf87/environments/env-z3y2x1/statements/marketplace-analytics-marketplace-query",
+    "created_at": "2026-05-08T10:30:00Z",
+    "updated_at": "2026-05-08T10:30:15Z"
+  },
+  "name": "marketplace-analytics-marketplace-query",
+  "organization_id": "b0b21724-4586-4a07-b787-d0bb5aacbf87",
+  "environment_id": "env-z3y2x1",
+  "spec": {
+    "statement": "SELECT * FROM marketplace_events",
+    "compute_pool_id": "lfcp-8m03rm"
+  },
+  "status": {
+    "phase": "RUNNING",
+    "detail": "Statement is running successfully"
+  }
+}
+```
+
+#### Resuming a Statement
+
+```bash
+java -jar marketplace-analytics.jar resume \
+  --statement-name marketplace-query \
+  --application-name marketplace-analytics \
+  --cloud aws \
+  --region us-east-1 \
+  --organization-id b0b21724-4586-4a07-b787-d0bb5aacbf87 \
+  --environment-id env-z3y2x1 \
+  --compute-pool-id lfcp-8m03rm \
+  --global-api-key <key> \
+  --global-api-secret <secret>
+```
+
+```bash
+# Block until the statement reaches RUNNING (fails with exit 1 if not running within the timeout)
+java -jar marketplace-analytics.jar resume \
+  --statement-name marketplace-query \
+  --wait 10min \
+  --application-name marketplace-analytics \
+  # ... other configuration
+```
+
+#### Stopping a Statement
+
+```bash
+java -jar marketplace-analytics.jar stop \
+  --statement-name marketplace-query \
+  --application-name marketplace-analytics \
+  --cloud aws \
+  --region us-east-1 \
+  --organization-id b0b21724-4586-4a07-b787-d0bb5aacbf87 \
+  --environment-id env-z3y2x1 \
+  --compute-pool-id lfcp-8m03rm \
+  --global-api-key <key> \
+  --global-api-secret <secret>
+```
+
+```bash
+# Block until the statement reaches STOPPED (fails with exit 1 if not stopped within the timeout)
+java -jar marketplace-analytics.jar stop \
+  --statement-name marketplace-query \
+  --wait 10min \
+  --application-name marketplace-analytics \
+  # ... other configuration
+```
+
+#### Deleting a Statement
+
+```bash
+java -jar marketplace-analytics.jar delete \
+  --statement-name marketplace-query \
+  --application-name marketplace-analytics \
+  --cloud aws \
+  --region us-east-1 \
+  --organization-id b0b21724-4586-4a07-b787-d0bb5aacbf87 \
+  --environment-id env-z3y2x1 \
+  --compute-pool-id lfcp-8m03rm \
+  --global-api-key <key> \
+  --global-api-secret <secret>
+```
+
+```bash
+# Block until the statement is fully deleted (fails with exit 1 if not deleted within the timeout)
+java -jar marketplace-analytics.jar delete \
+  --statement-name marketplace-query \
+  --wait 10min \
+  --application-name marketplace-analytics \
+  # ... other configuration
+```
+
+### Exit Codes
+
+The action execution follows standard exit code conventions:
+
+- **Exit code 0**: Action completed successfully
+- **Exit code 1**: Action failed (e.g., statement not found, permission denied, missing configuration, timeout elapsed)
+
+This makes it easy to integrate into CI/CD pipelines and handle failures appropriately.
+
+### On-Conflict Behavior
+
+When a statement with the same name already exists but with a different spec,
+the plugin's default behavior (`client.on-conflict=fail`) is to propagate the underlying conflict as a
+`ConfluentFlinkException`. Set `client.on-conflict=replace` (or pass `--on-conflict replace`) if, despite
+the conflict, the submission should be enforced.
+
+In that case the conflicting statement is deleted and the submission is retried once.
+`replace` **always requires** `client.application-name` (or `APPLICATION_NAME`) to be set, so that
+statement names are stable across runs and a redeploy targets the same name.
+
+```bash
+java -jar target/marketplace-analytics.jar \
+  --application-name marketplace-analytics \
+  --on-conflict replace \
+  --cloud aws \
+  --region us-east-1 \
+  ...
+```
+
+### Workflows in this repository
 
 The repository contains workflows that show how a table program moves through a CI/CD pipeline:
 
@@ -650,6 +1000,75 @@ environments, each providing its own secrets and protection rules.
 ### Confluent Tools
 
 The `ConfluentTools` class adds additional methods that can be useful when developing and testing Table API programs.
+
+#### `ConfluentTools.setStatementName`
+
+Sets the statement name for the next statement submission.
+
+A statement name must be unique within an environment and cloud region for a given organization. By default, statement names are auto-generated using a UUID.
+
+**Important:** If you configured an application name via `ConfluentSettings.setApplicationName()`, it will be automatically prefixed to the statement name you provide here. For example, if your application name is `"myapp"` and you set the statement name to `"query1"`, the final statement name will be `"myapp-query1"`.
+
+If you did not configure an application name and use this method to set an explicit statement name, the statement name you provide will be used as-is (fully qualified).
+
+If you plan to submit multiple statements and use this method to manually set names, make sure to set a new name before each submission.
+
+**Naming constraints:**
+- Must contain only lowercase alphanumeric characters and hyphens
+- Must start and end with an alphanumeric character (not a hyphen)
+- Maximum length: 100 characters (including the application name prefix if configured)
+
+```java
+// Example with application name set to "myapp"
+// Final statement name will be: "myapp-my-custom-statement-name"
+ConfluentTools.setStatementName(env, "my-custom-statement-name");
+TableResult tableResult = env.executeSql("SELECT * FROM examples.marketplace.customers");
+
+// For multiple statements, set a new name before each submission
+// Final statement name will be: "myapp-another-statement-name"
+ConfluentTools.setStatementName(env, "another-statement-name");
+TableResult anotherResult = env.executeSql("SELECT * FROM examples.marketplace.products");
+
+// Example without application name (no prefix applied)
+// Final statement name will be exactly: "my-fully-qualified-statement-name"
+ConfluentTools.setStatementName(env, "my-fully-qualified-statement-name");
+TableResult result = env.executeSql("SELECT * FROM examples.marketplace.products");
+```
+
+**Alternative: Set statement name via ConfluentSettings**
+
+For single-statement programs, you can set the statement name when building the settings:
+
+```java
+ConfluentSettings settings = ConfluentSettings.newBuilder()
+    .setApplicationName("my-table-program")
+    .setStatementName("my-custom-query")
+    // ... other settings
+    .build();
+TableEnvironment env = TableEnvironment.create(settings);
+// This statement will use the configured name 'my-table-program-my-custom-query'
+env.executeSql("SELECT * FROM examples.marketplace.customers").print();
+```
+
+**Alternative: Set statement name via CLI, environment variable, or properties file**
+
+For single-statement programs, you can also set the statement name when starting your application:
+
+```bash
+# Via command-line argument
+java -jar my-table-program.jar --statement-name my-custom-query
+
+# Via environment variable
+export STATEMENT_NAME="my-custom-query"
+java -jar my-table-program.jar
+
+# Via properties file (cloud.properties)
+# client.statement-name=my-custom-query
+```
+
+Note: When set via `ConfluentSettings`, CLI arguments, environment variables, or properties file, the statement name
+applies globally to the TableEnvironment and is suitable for single-statement programs. For programs that submit
+multiple statements, use `ConfluentTools.setStatementName()` to set a new name before each submission.
 
 #### `ConfluentTools.collectChangelog` / `ConfluentTools.printChangelog`
 
@@ -730,6 +1149,20 @@ ConfluentTools.stopStatement(tableResult);
 ConfluentTools.stopStatement(env, "table-api-2024-03-21-150457-36e0dbb2e366-sql");
 // Deletes the statement entirely from the system
 ConfluentTools.deleteStatement(env, "table-api-2024-03-21-150457-36e0dbb2e366-sql");
+```
+
+#### `ConfluentTools.deleteArtifact`
+
+Deletes a UDF artifact from Confluent Cloud by its id (e.g. `cfa-...`). This is useful to
+clean up artifacts that were uploaded for inline UDFs but are no longer referenced by any
+statement.
+
+Requires artifact credentials: either a global API key/secret (`client.global-api-key` /
+`client.global-api-secret`) or a dedicated Artifact API key/secret (`client.artifact-api-key` /
+`client.artifact-api-secret`).
+
+```java
+ConfluentTools.deleteArtifact(env, "cfa-abc123");
 ```
 
 #### `ConfluentTools.getStatementHandle`
@@ -832,8 +1265,12 @@ The following API methods are considered stable and ready to be used:
 // TableEnvironment
 TableEnvironment.createStatementSet()
 TableEnvironment.createTable(String, TableDescriptor)
+TableEnvironment.createView(String, Table)  // inline/unregistered UDFs not supported
+TableEnvironment.createView(String, Table, boolean) // inline/unregistered UDFs not supported
 TableEnvironment.createFunction(...);
 TableEnvironment.dropFunction(...);
+TableEnvironment.dropTable(String);
+TableEnvironment.dropView(String);
 TableEnvironment.executeSql(String)
 TableEnvironment.explainSql(String)
 TableEnvironment.from(String)
@@ -912,7 +1349,7 @@ TableResult.print()
 TableConfig.set(...)
 
 // Expressions
-Expressions.*
+Expressions.* (call() supports calling functions by identifiers)
 
 // Others
 TableDescriptor.*
