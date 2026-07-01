@@ -253,9 +253,9 @@ public static void main(String[] args) {
   // Args might set cloud, region, org, env, and compute pool.
   // Environment variables might pass key and secret.
 
-  // Code sets the session name and SQL-specific options.
+  // Code sets the application name and SQL-specific options.
   ConfluentSettings settings = ConfluentSettings.newBuilder(args)
-      .setContextName("MyTableProgram")
+      .setApplicationName("my-table-program")
       .setOption("sql.local-time-zone", "UTC")
       .build();
 
@@ -357,15 +357,19 @@ A path to a properties file can also be specified by setting the environment var
 
 The following configuration needs to be provided:
 
-| Property key              | CLI arg              | Environment variable | Required | Comment                                                                      |
-|---------------------------|----------------------|----------------------|----------|------------------------------------------------------------------------------|
-| `client.cloud`            | `--cloud`            | `CLOUD_PROVIDER`     | Y        | Confluent identifier for a cloud provider. For example: `aws`                |
-| `client.region`           | `--region`           | `CLOUD_REGION`       | Y        | Confluent identifier for a cloud provider's region. For example: `us-east-1` |
-| `client.flink-api-key`    | `--flink-api-key`    | `FLINK_API_KEY`      | Y        | API key for Flink access.                                                    |
-| `client.flink-api-secret` | `--flink-api-secret` | `FLINK_API_SECRET`   | Y        | API secret for Flink access.                                                 |
-| `client.organization-id`  | `--organization-id`  | `ORG_ID`             | Y        | ID of the organization. For example: `b0b21724-4586-4a07-b787-d0bb5aacbf87`  |
-| `client.environment-id`   | `--environment-id`   | `ENV_ID`             | Y        | ID of the environment. For example: `env-z3y2x1`                             |
-| `client.compute-pool-id`  | `--compute-pool-id`  | `COMPUTE_POOL_ID`    | Y        | ID of the compute pool. For example: `lfcp-8m03rm`                           |
+| Property key               | CLI arg               | Environment variable | Required | Comment                                                                                                    |
+|----------------------------|-----------------------|----------------------|----------|------------------------------------------------------------------------------------------------------------|
+| `client.cloud`             | `--cloud`             | `CLOUD_PROVIDER`     | Y        | Confluent identifier for a cloud provider. For example: `aws`                                              |
+| `client.region`            | `--region`            | `CLOUD_REGION`       | Y        | Confluent identifier for a cloud provider's region. For example: `us-east-1`                               |
+| `client.flink-api-key`     | `--flink-api-key`     | `FLINK_API_KEY`      | Y¹       | API key for Flink access.                                                                                  |
+| `client.flink-api-secret`  | `--flink-api-secret`  | `FLINK_API_SECRET`   | Y¹       | API secret for Flink access.                                                                               |
+| `client.global-api-key`    | `--global-api-key`    | `GLOBAL_API_KEY`     | N        | API key for both Flink access and Artifact creation. See the [Authentication](#authentication) section.    |
+| `client.global-api-secret` | `--global-api-secret` | `GLOBAL_API_SECRET`  | N        | API secret for both Flink access and Artifact creation. See the [Authentication](#authentication) section. |
+| `client.organization-id`   | `--organization-id`   | `ORG_ID`             | Y        | ID of the organization. For example: `b0b21724-4586-4a07-b787-d0bb5aacbf87`                                |
+| `client.environment-id`    | `--environment-id`    | `ENV_ID`             | Y        | ID of the environment. For example: `env-z3y2x1`                                                           |
+| `client.compute-pool-id`   | `--compute-pool-id`   | `COMPUTE_POOL_ID`    | Y        | ID of the compute pool. For example: `lfcp-8m03rm`                                                         |
+
+¹ Required unless a global API key and secret are configured. See the [Authentication](#authentication) section.
 
 Required configuration for supporting UDF uploads:
 
@@ -378,16 +382,88 @@ Note: Artifact key and secret can be created via Web Console under `API keys` ->
 
 Additional configuration:
 
-| Property key                        | CLI arg                        | Environment variable         | Required | Comment                                                                                                                        |
-|-------------------------------------|--------------------------------|------------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------|
-| `client.endpoint-template`          | `--endpoint-template`          | `ENDPOINT_TEMPLATE`          | N        | A template for the endpoint URL. For example: `https://flinkpls-dom123.{region}.{cloud}.confluent.cloud`                       |
-| `client.artifact-endpoint-template` | `--artifact-endpoint-template` | `ARTIFACT_ENDPOINT_TEMPLATE` | N        | A template for the artifact endpoint URL. For example: `https://api.{region}.{cloud}.confluent.cloud`                          |
-| `client.principal-id`               | `--principal-id`               | `PRINCIPAL_ID`               | N        | Principal that runs submitted statements. For example: `sa-23kgz4` (for a service account)                                     |
-| `client.context`                    | `--context`                    |                              | N        | A name for this Table API session. For example: `my_table_program`                                                             |
-| `client.statement-name`             | `--statement-name`             |                              | N        | Unique name for statement submission. By default, generated using a UUID.                                                      |
-| `client.rest-endpoint`              | `--rest-endpoint`              | `REST_ENDPOINT`              | N        | URL to the REST endpoint. For example: `proxyto.confluent.cloud`                                                               |
-| `client.catalog-cache`              |                                |                              | N        | Expiration time for catalog objects. For example: '5 min'. '1 min' by default. '0' disables the caching.                       |
-| `client.tmp-dir`                    | `--tmp-dir`                    |                              | N        | Directory for temporary files created by the plugin, e.g. UDF jars. For example: '/tmp'. By default value of 'java.io.tmpdir'. |
+| Property key                        | CLI arg                        | Environment variable         | Required | Comment                                                                                                                                                                                         |
+|-------------------------------------|--------------------------------|------------------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `client.endpoint-template`          | `--endpoint-template`          | `ENDPOINT_TEMPLATE`          | N        | A template for the endpoint URL. For example: `https://flinkpls-dom123.{region}.{cloud}.confluent.cloud`                                                                                        |
+| `client.artifact-endpoint-template` | `--artifact-endpoint-template` | `ARTIFACT_ENDPOINT_TEMPLATE` | N        | A template for the artifact endpoint URL. For example: `https://api.{region}.{cloud}.confluent.cloud`                                                                                           |
+| `client.principal-id`               | `--principal-id`               | `PRINCIPAL_ID`               | N        | Principal that runs submitted statements. For example: `sa-23kgz4` (for a service account)                                                                                                      |
+| `client.application-name`           | `--application-name`           | `APPLICATION_NAME`           | N        | A name for this Table API application. Serves as a namespace prefix for all statement names. Lowercase alphanumeric characters and hyphens only, max 100 chars. For example: `my-table-program` |
+| `client.statement-name`             | `--statement-name`             | `STATEMENT_NAME`             | N        | Unique name for statement submission. If an application name is set, it is prefixed. By default, generated using a UUID.                                                                        |
+| `client.action.kind`                |                                |                              | N        | Lifecycle action for CI/CD integration. One of `list`, `describe`, `resume`, `stop`, `delete`. See [CI/CD with GitHub Actions](#cicd-with-github-actions).                                      |
+| `client.action.skip-exit`           |                                |                              | N        | Skip `System.exit()` after an action runs. Default: `false`.                                                                                                                                    |
+| `client.wait`                       | `--wait [<duration>]`          |                              | N        | When set, lifecycle actions (`resume`, `stop`, `delete`) block until the target phase is reached or `client.timeout` elapses. An optional duration overrides the timeout. Default: `false`.     |
+| `client.timeout`                    |                                |                              | N        | Maximum time to wait when `client.wait` is set. For example: `5min` or `300s`. Default: `300s`.                                                                                                 |
+| `client.on-conflict`                | `--on-conflict`                | `ON_CONFLICT`                | N        | Behavior when a statement with the same name already exists with a different spec. `fail` (default) or `replace`. Requires `client.application-name`.                                           |
+| `client.rest-endpoint`              | `--rest-endpoint`              | `REST_ENDPOINT`              | N        | URL to the REST endpoint. For example: `proxyto.confluent.cloud`                                                                                                                                |
+| `client.catalog-cache`              |                                |                              | N        | Expiration time for catalog objects. For example: `5 min`. `1 min` by default. `0` disables the caching.                                                                                        |
+| `client.tmp-dir`                    | `--tmp-dir`                    |                              | N        | Directory for temporary files created by the plugin, e.g. UDF jars. For example: `/tmp`. By default value of `java.io.tmpdir`.                                                                  |
+
+### Authentication
+
+The plugin authenticates against the Confluent Cloud REST APIs using the mode selected by `client.auth-mode`. If it is not set, the default is `api-key`.
+
+| Property key       | CLI arg       | Environment variable | Required              | Comment                                                                                |
+|--------------------|---------------|----------------------|-----------------------|----------------------------------------------------------------------------------------|
+| `client.auth-mode` | `--auth-mode` | `AUTH_MODE`          | N (default `api-key`) | One of `api-key`, `oauth-client-credentials`, `oauth-static-token` (case-insensitive). |
+
+#### API Keys (default)
+
+In the default `api-key` mode, the plugin first tries the global API key and secret (`client.global-api-key` / `client.global-api-secret`), which work for both Flink access and Artifact creation. If no global key and secret are set, it falls back to the dedicated Flink API key and secret (`client.flink-api-key` / `client.flink-api-secret`) and, only when you upload UDF artifacts, a separate Artifact API key and secret (`client.artifact-api-key` / `client.artifact-api-secret`). All of these keys are listed in [Configuration Options](#configuration-options) above.
+
+#### OAuth
+
+The plugin supports two OAuth-based authentication modes:
+
+- `oauth-client-credentials` (`client.auth-mode=oauth-client-credentials`): the plugin fetches and refreshes access tokens from an external IdP using the OAuth 2.0 client credentials flow.
+- `oauth-static-token` (`client.auth-mode=oauth-static-token`): you supply a pre-issued bearer token as a string via `client.oauth.external-access-token`, or programmatically via the Java builder `setOAuthTokenProvider(OAuthTokenProvider)` for cloud-native flows (for example Azure Managed Identity or AWS IAM workload identity).
+
+In both modes, a Confluent Cloud identity pool with the correct permission assignments must exist for the intended workload. When running in an OAuth mode, UDF artifact uploads work without further configuration. For detailed setup instructions, see the [Confluent Cloud OAuth Guide](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/oauth/overview.html).
+
+| Property key                          | CLI arg                          | Environment variable           | Required                                    | Comment                                                                        |
+|---------------------------------------|----------------------------------|--------------------------------|---------------------------------------------|--------------------------------------------------------------------------------|
+| `client.oauth.external-token-url`     | `--oauth.external-token-url`     | `OAUTH_EXTERNAL_TOKEN_URL`     | Y (`OAUTH_CLIENT_CREDENTIALS`)              | URL of the IdP's OAuth 2.0 token endpoint.                                     |
+| `client.oauth.external-client-id`     | `--oauth.external-client-id`     | `OAUTH_EXTERNAL_CLIENT_ID`     | Y (`OAUTH_CLIENT_CREDENTIALS`)              | Client ID registered with the IdP.                                             |
+| `client.oauth.external-client-secret` | `--oauth.external-client-secret` | `OAUTH_EXTERNAL_CLIENT_SECRET` | Y (`OAUTH_CLIENT_CREDENTIALS`)              | Client Secret for the configured Client ID.                                    |
+| `client.oauth.external-token-scope`   | `--oauth.external-token-scope`   | `OAUTH_EXTERNAL_TOKEN_SCOPE`   | N                                           | Additional scopes attached during the client credentials flow.                 |
+| `client.oauth.external-access-token`  | `--oauth.external-access-token`  | `OAUTH_EXTERNAL_ACCESS_TOKEN`  | Y (`OAUTH_STATIC_TOKEN` without a callback) | Pre-issued bearer token. Provided as a string, no refreshes will be performed. |
+| `client.oauth.identity-pool-id`       | `--oauth.identity-pool-id`       | `OAUTH_IDENTITY_POOL_ID`       | Y (any OAuth mode)                          | Confluent Cloud identity pool ID. For example: `pool-xxxxx`.                   |
+
+Client credentials flow via environment variables:
+
+```bash
+export AUTH_MODE="oauth-client-credentials"
+export OAUTH_EXTERNAL_TOKEN_URL="https://mycompany.okta.com/oauth2/abc123/v1/token"
+export OAUTH_EXTERNAL_CLIENT_ID="cid"
+export OAUTH_EXTERNAL_CLIENT_SECRET="csec"
+export OAUTH_IDENTITY_POOL_ID="pool-xxxxx"
+export OAUTH_EXTERNAL_TOKEN_SCOPE="write:service"
+```
+
+Static token via environment variables:
+
+```bash
+export AUTH_MODE="oauth-static-token"
+export OAUTH_EXTERNAL_ACCESS_TOKEN="eyJ-..."
+export OAUTH_IDENTITY_POOL_ID="pool-xxxxx"
+```
+
+For cloud-native flows, provide a token programmatically with `setOAuthTokenProvider`. The following example wraps Azure Managed Identity; the same `OAuthTokenProvider` interface can wrap AWS STS `AssumeRoleWithWebIdentity` or any other provider:
+
+```java
+TokenCredential credential = new DefaultAzureCredentialBuilder().build();
+TokenRequestContext request =
+    new TokenRequestContext().addScopes("api://<client_id>/.default");
+
+ConfluentSettings settings = ConfluentSettings.newBuilder()
+    .setAuthMode(AuthMode.OAUTH_STATIC_TOKEN)
+    .setOAuthIdentityPoolId("pool-xxxxx")
+    .setOAuthTokenProvider(
+        () -> {
+          AccessToken at = credential.getToken(request).block();
+          return new OAuthToken(at.getToken(), at.getExpiresAt().toInstant());
+        })
+    .build();
+```
 
 ### Endpoint Configuration
 
