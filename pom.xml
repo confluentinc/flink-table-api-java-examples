@@ -18,9 +18,9 @@
         <maven.compiler.target>${target.java.version}</maven.compiler.target>
         <log4j.version>2.26.0</log4j.version>
         <spotless.version>3.7.0</spotless.version>
-        <junit.version>5.12.2</junit.version>
+        <junit.version>5.14.4</junit.version>
         <assertj.version>3.27.7</assertj.version>
-        <surefire.version>3.5.4</surefire.version>
+        <surefire.version>3.5.6</surefire.version>
     </properties>
 
     <repositories>
