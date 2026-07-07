@@ -2,6 +2,51 @@
 
 This repository contains examples for running Apache Flink's Table API on Confluent Cloud.
 
+## Table of Contents
+
+- [Introduction to Table API for Java](#introduction-to-table-api-for-java)
+- [Table API on Confluent Cloud](#table-api-on-confluent-cloud)
+  - [Motivating Example](#motivating-example)
+- [Developer Journey](#developer-journey)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Run Examples](#run-examples)
+  - [Configure the cloud.properties File](#configure-the-cloudproperties-file)
+  - [Table API Playground using JShell](#table-api-playground-using-jshell)
+  - [How to Continue](#how-to-continue)
+- [Configuration](#configuration)
+  - [Via Properties File](#via-properties-file)
+  - [Via Command-Line arguments](#via-command-line-arguments)
+  - [Via Code](#via-code)
+  - [Via Environment Variables](#via-environment-variables)
+  - [Configuration Options](#configuration-options)
+  - [Authentication](#authentication)
+  - [Endpoint Configuration](#endpoint-configuration)
+  - [client.endpoint-template](#clientendpoint-template)
+  - [client.artifact-endpoint-template](#clientartifact-endpoint-template)
+  - [client.rest-endpoint (Discouraged)](#clientrest-endpoint-discouraged)
+  - [Relationship and Default Behavior](#relationship-and-default-behavior)
+  - [Examples](#examples)
+- [Testing Table Programs](#testing-table-programs)
+  - [How local testing works](#how-local-testing-works)
+  - [Local testing limitations](#local-testing-limitations)
+  - [Process Table Function Test Harness](#process-table-function-test-harness)
+- [CI/CD Integration](#cicd-integration)
+  - [Overview](#overview)
+  - [Usage](#usage)
+  - [Examples](#examples-1)
+  - [Exit Codes](#exit-codes)
+  - [On-Conflict Behavior](#on-conflict-behavior)
+  - [Workflows in this repository](#workflows-in-this-repository)
+- [Documentation for Confluent Utilities](#documentation-for-confluent-utilities)
+  - [Confluent Tools](#confluent-tools)
+  - [Confluent Table Descriptor](#confluent-table-descriptor)
+- [Known Limitations](#known-limitations)
+  - [Unsupported by Table API Plugin](#unsupported-by-table-api-plugin)
+  - [Issues in Open Source Flink](#issues-in-open-source-flink)
+  - [Supported API](#supported-api)
+- [Support](#support)
+
 ## Introduction to Table API for Java
 
 The [Table API](https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/table/overview/) enables a programmatic
@@ -253,9 +298,9 @@ public static void main(String[] args) {
   // Args might set cloud, region, org, env, and compute pool.
   // Environment variables might pass key and secret.
 
-  // Code sets the session name and SQL-specific options.
+  // Code sets the application name and SQL-specific options.
   ConfluentSettings settings = ConfluentSettings.newBuilder(args)
-      .setContextName("MyTableProgram")
+      .setApplicationName("my-table-program")
       .setOption("sql.local-time-zone", "UTC")
       .build();
 
@@ -273,8 +318,8 @@ client.cloud=aws
 client.region=us-east-1
 
 # Access & compute resources
-client.flink-api-key=key
-client.flink-api-secret=secret
+client.global-api-key=key
+client.global-api-secret=secret
 client.organization-id=b0b21724-4586-4a07-b787-d0bb5aacbf87
 client.environment-id=env-z3y2x1
 client.compute-pool-id=lfcp-8m03rm
@@ -299,8 +344,8 @@ Pass all options (or some options) via command-line arguments:
 java -jar my-table-program.jar \
   --cloud aws \
   --region us-east-1 \
-  --flink-api-key key \
-  --flink-api-secret secret \
+  --global-api-key key \
+  --global-api-secret secret \
   --organization-id b0b21724-4586-4a07-b787-d0bb5aacbf87 \
   --environment-id env-z3y2x1 \
   --compute-pool-id lfcp-8m03rm
@@ -322,8 +367,8 @@ Pass all options (or some options) in code:
 ConfluentSettings settings = ConfluentSettings.newBuilder()
     .setCloud("aws")
     .setRegion("us-east-1")
-    .setFlinkApiKey("key")
-    .setFlinkApiSecret("secret")
+    .setGlobalApiKey("key")
+    .setGlobalApiSecret("secret")
     .setOrganizationId("b0b21724-4586-4a07-b787-d0bb5aacbf87")
     .setEnvironmentId("env-z3y2x1")
     .setComputePoolId("lfcp-8m03rm")
@@ -337,8 +382,8 @@ Pass all options (or some options) as variables:
 ```bash
 export CLOUD_PROVIDER="aws"
 export CLOUD_REGION="us-east-1"
-export FLINK_API_KEY="key"
-export FLINK_API_SECRET="secret"
+export GLOBAL_API_KEY="key"
+export GLOBAL_API_SECRET="secret"
 export ORG_ID="b0b21724-4586-4a07-b787-d0bb5aacbf87"
 export ENV_ID="env-z3y2x1"
 export COMPUTE_POOL_ID="lfcp-8m03rm"
@@ -357,15 +402,19 @@ A path to a properties file can also be specified by setting the environment var
 
 The following configuration needs to be provided:
 
-| Property key              | CLI arg              | Environment variable | Required | Comment                                                                      |
-|---------------------------|----------------------|----------------------|----------|------------------------------------------------------------------------------|
-| `client.cloud`            | `--cloud`            | `CLOUD_PROVIDER`     | Y        | Confluent identifier for a cloud provider. For example: `aws`                |
-| `client.region`           | `--region`           | `CLOUD_REGION`       | Y        | Confluent identifier for a cloud provider's region. For example: `us-east-1` |
-| `client.flink-api-key`    | `--flink-api-key`    | `FLINK_API_KEY`      | Y        | API key for Flink access.                                                    |
-| `client.flink-api-secret` | `--flink-api-secret` | `FLINK_API_SECRET`   | Y        | API secret for Flink access.                                                 |
-| `client.organization-id`  | `--organization-id`  | `ORG_ID`             | Y        | ID of the organization. For example: `b0b21724-4586-4a07-b787-d0bb5aacbf87`  |
-| `client.environment-id`   | `--environment-id`   | `ENV_ID`             | Y        | ID of the environment. For example: `env-z3y2x1`                             |
-| `client.compute-pool-id`  | `--compute-pool-id`  | `COMPUTE_POOL_ID`    | Y        | ID of the compute pool. For example: `lfcp-8m03rm`                           |
+| Property key               | CLI arg               | Environment variable | Required | Comment                                                                                                    |
+|----------------------------|-----------------------|----------------------|----------|------------------------------------------------------------------------------------------------------------|
+| `client.cloud`             | `--cloud`             | `CLOUD_PROVIDER`     | Y        | Confluent identifier for a cloud provider. For example: `aws`                                              |
+| `client.region`            | `--region`            | `CLOUD_REGION`       | Y        | Confluent identifier for a cloud provider's region. For example: `us-east-1`                               |
+| `client.flink-api-key`     | `--flink-api-key`     | `FLINK_API_KEY`      | Y¹       | API key for Flink access.                                                                                  |
+| `client.flink-api-secret`  | `--flink-api-secret`  | `FLINK_API_SECRET`   | Y¹       | API secret for Flink access.                                                                               |
+| `client.global-api-key`    | `--global-api-key`    | `GLOBAL_API_KEY`     | N        | API key for both Flink access and Artifact creation. See the [Authentication](#authentication) section.    |
+| `client.global-api-secret` | `--global-api-secret` | `GLOBAL_API_SECRET`  | N        | API secret for both Flink access and Artifact creation. See the [Authentication](#authentication) section. |
+| `client.organization-id`   | `--organization-id`   | `ORG_ID`             | Y        | ID of the organization. For example: `b0b21724-4586-4a07-b787-d0bb5aacbf87`                                |
+| `client.environment-id`    | `--environment-id`    | `ENV_ID`             | Y        | ID of the environment. For example: `env-z3y2x1`                                                           |
+| `client.compute-pool-id`   | `--compute-pool-id`   | `COMPUTE_POOL_ID`    | Y        | ID of the compute pool. For example: `lfcp-8m03rm`                                                         |
+
+¹ Required unless a global API key and secret are configured. See the [Authentication](#authentication) section.
 
 Required configuration for supporting UDF uploads:
 
@@ -378,16 +427,88 @@ Note: Artifact key and secret can be created via Web Console under `API keys` ->
 
 Additional configuration:
 
-| Property key                        | CLI arg                        | Environment variable         | Required | Comment                                                                                                                        |
-|-------------------------------------|--------------------------------|------------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------|
-| `client.endpoint-template`          | `--endpoint-template`          | `ENDPOINT_TEMPLATE`          | N        | A template for the endpoint URL. For example: `https://flinkpls-dom123.{region}.{cloud}.confluent.cloud`                       |
-| `client.artifact-endpoint-template` | `--artifact-endpoint-template` | `ARTIFACT_ENDPOINT_TEMPLATE` | N        | A template for the artifact endpoint URL. For example: `https://api.{region}.{cloud}.confluent.cloud`                          |
-| `client.principal-id`               | `--principal-id`               | `PRINCIPAL_ID`               | N        | Principal that runs submitted statements. For example: `sa-23kgz4` (for a service account)                                     |
-| `client.context`                    | `--context`                    |                              | N        | A name for this Table API session. For example: `my_table_program`                                                             |
-| `client.statement-name`             | `--statement-name`             |                              | N        | Unique name for statement submission. By default, generated using a UUID.                                                      |
-| `client.rest-endpoint`              | `--rest-endpoint`              | `REST_ENDPOINT`              | N        | URL to the REST endpoint. For example: `proxyto.confluent.cloud`                                                               |
-| `client.catalog-cache`              |                                |                              | N        | Expiration time for catalog objects. For example: '5 min'. '1 min' by default. '0' disables the caching.                       |
-| `client.tmp-dir`                    | `--tmp-dir`                    |                              | N        | Directory for temporary files created by the plugin, e.g. UDF jars. For example: '/tmp'. By default value of 'java.io.tmpdir'. |
+| Property key                        | CLI arg                        | Environment variable         | Required | Comment                                                                                                                                                                                         |
+|-------------------------------------|--------------------------------|------------------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `client.endpoint-template`          | `--endpoint-template`          | `ENDPOINT_TEMPLATE`          | N        | A template for the endpoint URL. For example: `https://flinkpls-dom123.{region}.{cloud}.confluent.cloud`                                                                                        |
+| `client.artifact-endpoint-template` | `--artifact-endpoint-template` | `ARTIFACT_ENDPOINT_TEMPLATE` | N        | A template for the artifact endpoint URL. For example: `https://api.{region}.{cloud}.confluent.cloud`                                                                                           |
+| `client.principal-id`               | `--principal-id`               | `PRINCIPAL_ID`               | N        | Principal that runs submitted statements. For example: `sa-23kgz4` (for a service account)                                                                                                      |
+| `client.application-name`           | `--application-name`           | `APPLICATION_NAME`           | N        | A name for this Table API application. Serves as a namespace prefix for all statement names. Lowercase alphanumeric characters and hyphens only, max 100 chars. For example: `my-table-program` |
+| `client.statement-name`             | `--statement-name`             | `STATEMENT_NAME`             | N        | Unique name for statement submission. If an application name is set, it is prefixed. By default, generated using a UUID.                                                                        |
+| `client.action.kind`                |                                |                              | N        | Lifecycle action for CI/CD integration. One of `list`, `describe`, `resume`, `stop`, `delete`. See [CI/CD with GitHub Actions](#cicd-with-github-actions).                                      |
+| `client.action.skip-exit`           |                                |                              | N        | Skip `System.exit()` after an action runs. Default: `false`.                                                                                                                                    |
+| `client.wait`                       | `--wait [<duration>]`          |                              | N        | When set, lifecycle actions (`resume`, `stop`, `delete`) block until the target phase is reached or `client.timeout` elapses. An optional duration overrides the timeout. Default: `false`.     |
+| `client.timeout`                    |                                |                              | N        | Maximum time to wait when `client.wait` is set. For example: `5min` or `300s`. Default: `300s`.                                                                                                 |
+| `client.on-conflict`                | `--on-conflict`                | `ON_CONFLICT`                | N        | Behavior when a statement with the same name already exists with a different spec. `fail` (default) or `replace`. Requires `client.application-name`.                                           |
+| `client.rest-endpoint`              | `--rest-endpoint`              | `REST_ENDPOINT`              | N        | URL to the REST endpoint. For example: `proxyto.confluent.cloud`                                                                                                                                |
+| `client.catalog-cache`              |                                |                              | N        | Expiration time for catalog objects. For example: `5 min`. `1 min` by default. `0` disables the caching.                                                                                        |
+| `client.tmp-dir`                    | `--tmp-dir`                    |                              | N        | Directory for temporary files created by the plugin, e.g. UDF jars. For example: `/tmp`. By default value of `java.io.tmpdir`.                                                                  |
+
+### Authentication
+
+The plugin authenticates against the Confluent Cloud REST APIs using the mode selected by `client.auth-mode`. If it is not set, the default is `api-key`.
+
+| Property key       | CLI arg       | Environment variable | Required              | Comment                                                                                |
+|--------------------|---------------|----------------------|-----------------------|----------------------------------------------------------------------------------------|
+| `client.auth-mode` | `--auth-mode` | `AUTH_MODE`          | N (default `api-key`) | One of `api-key`, `oauth-client-credentials`, `oauth-static-token` (case-insensitive). |
+
+#### API Keys (default)
+
+In the default `api-key` mode, the plugin first tries the global API key and secret (`client.global-api-key` / `client.global-api-secret`), which work for both Flink access and Artifact creation. If no global key and secret are set, it falls back to the dedicated Flink API key and secret (`client.flink-api-key` / `client.flink-api-secret`) and, only when you upload UDF artifacts, a separate Artifact API key and secret (`client.artifact-api-key` / `client.artifact-api-secret`). All of these keys are listed in [Configuration Options](#configuration-options) above.
+
+#### OAuth
+
+The plugin supports two OAuth-based authentication modes:
+
+- `oauth-client-credentials` (`client.auth-mode=oauth-client-credentials`): the plugin fetches and refreshes access tokens from an external IdP using the OAuth 2.0 client credentials flow.
+- `oauth-static-token` (`client.auth-mode=oauth-static-token`): you supply a pre-issued bearer token as a string via `client.oauth.external-access-token`, or programmatically via the Java builder `setOAuthTokenProvider(OAuthTokenProvider)` for cloud-native flows (for example Azure Managed Identity or AWS IAM workload identity).
+
+In both modes, a Confluent Cloud identity pool with the correct permission assignments must exist for the intended workload. When running in an OAuth mode, UDF artifact uploads work without further configuration. For detailed setup instructions, see the [Confluent Cloud OAuth Guide](https://docs.confluent.io/cloud/current/security/authenticate/workload-identities/identity-providers/oauth/overview.html).
+
+| Property key                          | CLI arg                          | Environment variable           | Required                                    | Comment                                                                        |
+|---------------------------------------|----------------------------------|--------------------------------|---------------------------------------------|--------------------------------------------------------------------------------|
+| `client.oauth.external-token-url`     | `--oauth.external-token-url`     | `OAUTH_EXTERNAL_TOKEN_URL`     | Y (`OAUTH_CLIENT_CREDENTIALS`)              | URL of the IdP's OAuth 2.0 token endpoint.                                     |
+| `client.oauth.external-client-id`     | `--oauth.external-client-id`     | `OAUTH_EXTERNAL_CLIENT_ID`     | Y (`OAUTH_CLIENT_CREDENTIALS`)              | Client ID registered with the IdP.                                             |
+| `client.oauth.external-client-secret` | `--oauth.external-client-secret` | `OAUTH_EXTERNAL_CLIENT_SECRET` | Y (`OAUTH_CLIENT_CREDENTIALS`)              | Client Secret for the configured Client ID.                                    |
+| `client.oauth.external-token-scope`   | `--oauth.external-token-scope`   | `OAUTH_EXTERNAL_TOKEN_SCOPE`   | N                                           | Additional scopes attached during the client credentials flow.                 |
+| `client.oauth.external-access-token`  | `--oauth.external-access-token`  | `OAUTH_EXTERNAL_ACCESS_TOKEN`  | Y (`OAUTH_STATIC_TOKEN` without a callback) | Pre-issued bearer token. Provided as a string, no refreshes will be performed. |
+| `client.oauth.identity-pool-id`       | `--oauth.identity-pool-id`       | `OAUTH_IDENTITY_POOL_ID`       | Y (any OAuth mode)                          | Confluent Cloud identity pool ID. For example: `pool-xxxxx`.                   |
+
+Client credentials flow via environment variables:
+
+```bash
+export AUTH_MODE="oauth-client-credentials"
+export OAUTH_EXTERNAL_TOKEN_URL="https://mycompany.okta.com/oauth2/abc123/v1/token"
+export OAUTH_EXTERNAL_CLIENT_ID="cid"
+export OAUTH_EXTERNAL_CLIENT_SECRET="csec"
+export OAUTH_IDENTITY_POOL_ID="pool-xxxxx"
+export OAUTH_EXTERNAL_TOKEN_SCOPE="write:service"
+```
+
+Static token via environment variables:
+
+```bash
+export AUTH_MODE="oauth-static-token"
+export OAUTH_EXTERNAL_ACCESS_TOKEN="eyJ-..."
+export OAUTH_IDENTITY_POOL_ID="pool-xxxxx"
+```
+
+For cloud-native flows, provide a token programmatically with `setOAuthTokenProvider`. The following example wraps Azure Managed Identity; the same `OAuthTokenProvider` interface can wrap AWS STS `AssumeRoleWithWebIdentity` or any other provider:
+
+```java
+TokenCredential credential = new DefaultAzureCredentialBuilder().build();
+TokenRequestContext request =
+    new TokenRequestContext().addScopes("api://<client_id>/.default");
+
+ConfluentSettings settings = ConfluentSettings.newBuilder()
+    .setAuthMode(AuthMode.OAUTH_STATIC_TOKEN)
+    .setOAuthIdentityPoolId("pool-xxxxx")
+    .setOAuthTokenProvider(
+        () -> {
+          AccessToken at = credential.getToken(request).block();
+          return new OAuthToken(at.getToken(), at.getExpiresAt().toInstant());
+        })
+    .build();
+```
 
 ### Endpoint Configuration
 
@@ -532,7 +653,312 @@ Running locally on Apache Flink is not identical to Confluent Cloud:
 Local tests give fast feedback on transformation logic; integration tests against Confluent Cloud
 remain the source of truth.
 
-## CI/CD with GitHub Actions
+### Process Table Function Test Harness
+
+The `ProcessTableFunctionTestHarness` is available for unit testing Process Table Functions (PTFs)
+before this capability is released in an official Apache Flink release. The harness ships with
+`confluent-flink-table-api-java-plugin`, so depending on the plugin (as this project already does)
+is enough to use it in your tests.
+
+For guidance on how to use the `ProcessTableFunctionTestHarness` for testing PTFs, please consult the
+[nightly documentation](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/functions/ptfs/#testing-process-table-functions).
+
+## CI/CD Integration
+
+The Confluent Flink plugin supports lifecycle management actions for seamless integration into CI/CD pipelines.
+This allows you to manage Flink statements directly from your deployment scripts without writing SQL or using the API.
+
+### Overview
+
+Instead of managing statement lifecycle programmatically or through SQL, you can invoke your JAR with an action instruction.
+This is particularly useful for:
+
+- **Continuous Deployment**: Manage statement lifecycle before deploying new versions
+- **Resource Cleanup**: Clean up statements as part of environment teardown
+- **Rollback Procedures**: Handle statements during rollback workflows
+- **Testing Pipelines**: Clean up test statements after integration tests
+
+### Usage
+
+Actions are specified as the first argument that is not prefixed with `--` when running your JAR.
+Only one action is allowed per execution.
+
+**Important**: To use this feature, your Table API application must parse command-line arguments using
+`ConfluentSettings.fromArgs(args)` or `ConfluentSettings.newBuilderFromArgs(args)` in its `main()` method.
+When an action is detected, it will be executed and the JVM will terminate early (via `System.exit()`),
+preventing the rest of your application logic from running.
+
+```java
+public static void main(String[] args) {
+    // This will automatically detect and execute actions if present
+    // If an action is specified, the program will exit here
+    EnvironmentSettings settings = ConfluentSettings.fromArgs(args);
+    TableEnvironment env = TableEnvironment.create(settings);
+
+    // Your application logic here (only runs if no action was specified)
+    // ...
+}
+```
+
+To disable the automatic exit behavior (e.g., for testing), set the internal configuration option `client.action.skip-exit=true`.
+The implementation must catch a `ActionCompletedException` in case of errors.
+
+#### Basic Syntax
+
+```bash
+java -jar my-table-program.jar <action> [options]
+```
+
+Where `<action>` is one of:
+- `list` - Lists statements belonging to the application or a specific statement
+- `describe` - Shows full JSON details for a specific statement
+- `resume` - Resumes a stopped statement
+- `stop` - Stops a running statement
+- `delete` - Deletes a statement entirely from the system
+
+#### Required Configuration
+
+When using `describe`, `resume`, `stop` or `delete` actions, you **must** provide a static statement name via one of these methods:
+
+1. **Command-line argument:**
+   ```bash
+   java -jar my-table-program.jar stop --statement-name my-query [other options]
+   ```
+
+2. **Environment variable:**
+   ```bash
+   export STATEMENT_NAME="my-query"
+   java -jar my-table-program.jar stop [other options]
+   ```
+
+3. **Properties file:**
+   ```properties
+   # cloud.properties
+   client.statement-name=my-query
+   ```
+
+If an application name is configured, it will be automatically prefixed to the statement name
+(e.g., `my-app-my-query`).
+
+**Note:** The `list` action does **not** require a statement name. When an application name is configured, it will list all statements matching that application name prefix. When no application name is configured, it will list **all statements** in the environment (which may be expensive in shared environments). For CI/CD usage, it is recommended to always configure an application name to scope the listing. Optionally, you can provide a statement name to list only a specific statement. The `describe`, `stop`, and `delete` actions all require a statement name.
+
+#### Waiting for Completion
+
+By default, `resume`, `stop`, and `delete` return as soon as the Confluent Cloud API has accepted the request: the
+statement may still be transitioning in the background. For CI/CD pipelines where the next step depends on the new
+phase being reached, pass `--wait` to block until the action has fully taken effect:
+
+- `resume` waits until the statement reaches `RUNNING`.
+- `stop` waits until the statement reaches `STOPPED`.
+- `delete` waits until the statement does not exist.
+
+Tune the maximum wait by passing a duration directly to `--wait` (e.g. `--wait 10min`, default: `300s`). Durations
+accept values like `30s`, `5min`, or `2h`. If no duration is passed the default timeout will be used. If the target
+phase is not reached before the timeout elapses, the action fails with exit code 1.
+
+The `list` and `describe` actions ignore `--wait`.
+
+### Examples
+
+#### Listing Statements
+
+The `list` action displays all statements associated with your application in a tabular format showing:
+- **Kind**: Always "Statement" (prepared for future resource types)
+- **Name**: The full statement name
+- **Phase**: The current status (e.g., RUNNING, COMPLETED, STOPPED)
+- **Created**: When the statement was created
+
+```bash
+# List all statements for an application
+java -jar marketplace-analytics.jar list \
+  --application-name marketplace-analytics \
+  --cloud aws \
+  --region us-east-1 \
+  --organization-id b0b21724-4586-4a07-b787-d0bb5aacbf87 \
+  --environment-id env-z3y2x1 \
+  --compute-pool-id lfcp-8m03rm \
+  --global-api-key <key> \
+  --global-api-secret <secret>
+```
+
+Example output:
+```
++------------+--------------------------------------------+-----------+---------------------------+
+| Kind       | Name                                       | Phase     | Created                   |
++------------+--------------------------------------------+-----------+---------------------------+
+| Statement  | marketplace-analytics-query-1              | RUNNING   | 2026-05-08T10:30:00Z      |
+| Statement  | marketplace-analytics-query-2              | COMPLETED | 2026-05-08T09:15:00Z      |
+| Statement  | marketplace-analytics-experimental-query   | STOPPED   | 2026-05-07T14:22:00Z      |
++------------+--------------------------------------------+-----------+---------------------------+
+```
+
+```bash
+# List a specific statement
+java -jar marketplace-analytics.jar list \
+  --statement-name marketplace-query \
+  --application-name marketplace-analytics \
+  --cloud aws \
+  --region us-east-1 \
+  --organization-id b0b21724-4586-4a07-b787-d0bb5aacbf87 \
+  --environment-id env-z3y2x1 \
+  --compute-pool-id lfcp-8m03rm \
+  --global-api-key <key> \
+  --global-api-secret <secret>
+```
+
+Example output:
+```
++------------+-----------------------------------------+-----------+---------------------------+
+| Kind       | Name                                    | Phase     | Created                   |
++------------+-----------------------------------------+-----------+---------------------------+
+| Statement  | marketplace-analytics-marketplace-query | RUNNING   | 2026-05-08T10:30:00Z      |
++------------+-----------------------------------------+-----------+---------------------------+
+```
+
+#### Describing a Statement
+
+The `describe` action displays the complete JSON representation of a statement from the Confluent Cloud SQL API (OpenAPI specification). This includes all metadata, status details, configuration, and results.
+
+```bash
+# Describe a specific statement
+java -jar marketplace-analytics.jar describe \
+  --statement-name marketplace-query \
+  --application-name marketplace-analytics \
+  --cloud aws \
+  --region us-east-1 \
+  --organization-id b0b21724-4586-4a07-b787-d0bb5aacbf87 \
+  --environment-id env-z3y2x1 \
+  --compute-pool-id lfcp-8m03rm \
+  --global-api-key <key> \
+  --global-api-secret <secret>
+```
+
+Example output:
+```json
+{
+  "api_version": "sql/v1",
+  "kind": "Statement",
+  "metadata": {
+    "self": "https://api.confluent.cloud/sql/v1/organizations/b0b21724-4586-4a07-b787-d0bb5aacbf87/environments/env-z3y2x1/statements/marketplace-analytics-marketplace-query",
+    "created_at": "2026-05-08T10:30:00Z",
+    "updated_at": "2026-05-08T10:30:15Z"
+  },
+  "name": "marketplace-analytics-marketplace-query",
+  "organization_id": "b0b21724-4586-4a07-b787-d0bb5aacbf87",
+  "environment_id": "env-z3y2x1",
+  "spec": {
+    "statement": "SELECT * FROM marketplace_events",
+    "compute_pool_id": "lfcp-8m03rm"
+  },
+  "status": {
+    "phase": "RUNNING",
+    "detail": "Statement is running successfully"
+  }
+}
+```
+
+#### Resuming a Statement
+
+```bash
+java -jar marketplace-analytics.jar resume \
+  --statement-name marketplace-query \
+  --application-name marketplace-analytics \
+  --cloud aws \
+  --region us-east-1 \
+  --organization-id b0b21724-4586-4a07-b787-d0bb5aacbf87 \
+  --environment-id env-z3y2x1 \
+  --compute-pool-id lfcp-8m03rm \
+  --global-api-key <key> \
+  --global-api-secret <secret>
+```
+
+```bash
+# Block until the statement reaches RUNNING (fails with exit 1 if not running within the timeout)
+java -jar marketplace-analytics.jar resume \
+  --statement-name marketplace-query \
+  --wait 10min \
+  --application-name marketplace-analytics \
+  # ... other configuration
+```
+
+#### Stopping a Statement
+
+```bash
+java -jar marketplace-analytics.jar stop \
+  --statement-name marketplace-query \
+  --application-name marketplace-analytics \
+  --cloud aws \
+  --region us-east-1 \
+  --organization-id b0b21724-4586-4a07-b787-d0bb5aacbf87 \
+  --environment-id env-z3y2x1 \
+  --compute-pool-id lfcp-8m03rm \
+  --global-api-key <key> \
+  --global-api-secret <secret>
+```
+
+```bash
+# Block until the statement reaches STOPPED (fails with exit 1 if not stopped within the timeout)
+java -jar marketplace-analytics.jar stop \
+  --statement-name marketplace-query \
+  --wait 10min \
+  --application-name marketplace-analytics \
+  # ... other configuration
+```
+
+#### Deleting a Statement
+
+```bash
+java -jar marketplace-analytics.jar delete \
+  --statement-name marketplace-query \
+  --application-name marketplace-analytics \
+  --cloud aws \
+  --region us-east-1 \
+  --organization-id b0b21724-4586-4a07-b787-d0bb5aacbf87 \
+  --environment-id env-z3y2x1 \
+  --compute-pool-id lfcp-8m03rm \
+  --global-api-key <key> \
+  --global-api-secret <secret>
+```
+
+```bash
+# Block until the statement is fully deleted (fails with exit 1 if not deleted within the timeout)
+java -jar marketplace-analytics.jar delete \
+  --statement-name marketplace-query \
+  --wait 10min \
+  --application-name marketplace-analytics \
+  # ... other configuration
+```
+
+### Exit Codes
+
+The action execution follows standard exit code conventions:
+
+- **Exit code 0**: Action completed successfully
+- **Exit code 1**: Action failed (e.g., statement not found, permission denied, missing configuration, timeout elapsed)
+
+This makes it easy to integrate into CI/CD pipelines and handle failures appropriately.
+
+### On-Conflict Behavior
+
+When a statement with the same name already exists but with a different spec,
+the plugin's default behavior (`client.on-conflict=fail`) is to propagate the underlying conflict as a
+`ConfluentFlinkException`. Set `client.on-conflict=replace` (or pass `--on-conflict replace`) if, despite
+the conflict, the submission should be enforced.
+
+In that case the conflicting statement is deleted and the submission is retried once.
+`replace` **always requires** `client.application-name` (or `APPLICATION_NAME`) to be set, so that
+statement names are stable across runs and a redeploy targets the same name.
+
+```bash
+java -jar target/marketplace-analytics.jar \
+  --application-name marketplace-analytics \
+  --on-conflict replace \
+  --cloud aws \
+  --region us-east-1 \
+  ...
+```
+
+### Workflows in this repository
 
 The repository contains workflows that show how a table program moves through a CI/CD pipeline:
 
@@ -574,6 +1000,75 @@ environments, each providing its own secrets and protection rules.
 ### Confluent Tools
 
 The `ConfluentTools` class adds additional methods that can be useful when developing and testing Table API programs.
+
+#### `ConfluentTools.setStatementName`
+
+Sets the statement name for the next statement submission.
+
+A statement name must be unique within an environment and cloud region for a given organization. By default, statement names are auto-generated using a UUID.
+
+**Important:** If you configured an application name via `ConfluentSettings.setApplicationName()`, it will be automatically prefixed to the statement name you provide here. For example, if your application name is `"myapp"` and you set the statement name to `"query1"`, the final statement name will be `"myapp-query1"`.
+
+If you did not configure an application name and use this method to set an explicit statement name, the statement name you provide will be used as-is (fully qualified).
+
+If you plan to submit multiple statements and use this method to manually set names, make sure to set a new name before each submission.
+
+**Naming constraints:**
+- Must contain only lowercase alphanumeric characters and hyphens
+- Must start and end with an alphanumeric character (not a hyphen)
+- Maximum length: 100 characters (including the application name prefix if configured)
+
+```java
+// Example with application name set to "myapp"
+// Final statement name will be: "myapp-my-custom-statement-name"
+ConfluentTools.setStatementName(env, "my-custom-statement-name");
+TableResult tableResult = env.executeSql("SELECT * FROM examples.marketplace.customers");
+
+// For multiple statements, set a new name before each submission
+// Final statement name will be: "myapp-another-statement-name"
+ConfluentTools.setStatementName(env, "another-statement-name");
+TableResult anotherResult = env.executeSql("SELECT * FROM examples.marketplace.products");
+
+// Example without application name (no prefix applied)
+// Final statement name will be exactly: "my-fully-qualified-statement-name"
+ConfluentTools.setStatementName(env, "my-fully-qualified-statement-name");
+TableResult result = env.executeSql("SELECT * FROM examples.marketplace.products");
+```
+
+**Alternative: Set statement name via ConfluentSettings**
+
+For single-statement programs, you can set the statement name when building the settings:
+
+```java
+ConfluentSettings settings = ConfluentSettings.newBuilder()
+    .setApplicationName("my-table-program")
+    .setStatementName("my-custom-query")
+    // ... other settings
+    .build();
+TableEnvironment env = TableEnvironment.create(settings);
+// This statement will use the configured name 'my-table-program-my-custom-query'
+env.executeSql("SELECT * FROM examples.marketplace.customers").print();
+```
+
+**Alternative: Set statement name via CLI, environment variable, or properties file**
+
+For single-statement programs, you can also set the statement name when starting your application:
+
+```bash
+# Via command-line argument
+java -jar my-table-program.jar --statement-name my-custom-query
+
+# Via environment variable
+export STATEMENT_NAME="my-custom-query"
+java -jar my-table-program.jar
+
+# Via properties file (cloud.properties)
+# client.statement-name=my-custom-query
+```
+
+Note: When set via `ConfluentSettings`, CLI arguments, environment variables, or properties file, the statement name
+applies globally to the TableEnvironment and is suitable for single-statement programs. For programs that submit
+multiple statements, use `ConfluentTools.setStatementName()` to set a new name before each submission.
 
 #### `ConfluentTools.collectChangelog` / `ConfluentTools.printChangelog`
 
@@ -654,6 +1149,20 @@ ConfluentTools.stopStatement(tableResult);
 ConfluentTools.stopStatement(env, "table-api-2024-03-21-150457-36e0dbb2e366-sql");
 // Deletes the statement entirely from the system
 ConfluentTools.deleteStatement(env, "table-api-2024-03-21-150457-36e0dbb2e366-sql");
+```
+
+#### `ConfluentTools.deleteArtifact`
+
+Deletes a UDF artifact from Confluent Cloud by its id (e.g. `cfa-...`). This is useful to
+clean up artifacts that were uploaded for inline UDFs but are no longer referenced by any
+statement.
+
+Requires artifact credentials: either a global API key/secret (`client.global-api-key` /
+`client.global-api-secret`) or a dedicated Artifact API key/secret (`client.artifact-api-key` /
+`client.artifact-api-secret`).
+
+```java
+ConfluentTools.deleteArtifact(env, "cfa-abc123");
 ```
 
 #### `ConfluentTools.getStatementHandle`
@@ -756,8 +1265,12 @@ The following API methods are considered stable and ready to be used:
 // TableEnvironment
 TableEnvironment.createStatementSet()
 TableEnvironment.createTable(String, TableDescriptor)
+TableEnvironment.createView(String, Table)  // inline/unregistered UDFs not supported
+TableEnvironment.createView(String, Table, boolean) // inline/unregistered UDFs not supported
 TableEnvironment.createFunction(...);
 TableEnvironment.dropFunction(...);
+TableEnvironment.dropTable(String);
+TableEnvironment.dropView(String);
 TableEnvironment.executeSql(String)
 TableEnvironment.explainSql(String)
 TableEnvironment.from(String)
@@ -836,7 +1349,7 @@ TableResult.print()
 TableConfig.set(...)
 
 // Expressions
-Expressions.*
+Expressions.* (call() supports calling functions by identifiers)
 
 // Others
 TableDescriptor.*
