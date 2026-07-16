@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-07-16
+
+### Features and Fixes
+
+- The Table API for Java on Confluent Cloud is now generally available. Bumped the
+  `confluent-flink-table-api-java-plugin` to `2.3-3` and updated the documentation for the GA
+  surface.
+
 ## 2026-07-01
 
 ### Features and Fixes
