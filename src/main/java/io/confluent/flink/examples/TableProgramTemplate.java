@@ -1,4 +1,4 @@
-package io.confluent.flink.examples.table;
+package io.confluent.flink.examples;
 
 // spotless:off
 
@@ -54,7 +54,9 @@ public class TableProgramTemplate {
     public static void main(String[] args) {
         EnvironmentSettings settings =
                 ConfluentSettings.newBuilderFromResource("/cloud.properties")
+                        .setApplicationName("my-table-program")
                         .setOption("sql.local-time-zone", "UTC")
+                        .applyArgs(args)
                         .build();
 
         TableEnvironment env = TableEnvironment.create(settings);

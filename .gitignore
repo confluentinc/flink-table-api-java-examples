@@ -6,3 +6,4 @@ target/
 cloud.properties
 dependency-reduced-pom.xml
 *.env
+.envrc

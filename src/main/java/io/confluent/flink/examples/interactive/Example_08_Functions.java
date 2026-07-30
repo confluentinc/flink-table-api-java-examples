@@ -1,4 +1,4 @@
-package io.confluent.flink.examples.table;
+package io.confluent.flink.examples.interactive;
 
 import io.confluent.flink.plugin.ConfluentSettings;
 
@@ -25,27 +25,31 @@ import static org.apache.flink.table.api.Expressions.row;
  *   <li>Uploads the JAR to Confluent artifact API.
  *   <li>Creates SQL functions for given artifacts.
  * </ul>
+ *
+ * <p>The UDF classes are plain Java, so their logic can be unit-tested locally without Confluent
+ * Cloud -- see {@code Example_08_FunctionsTest}.
+ *
+ * <p>NOTE: Registering functions uploads an artifact, so this example requires write access.
+ * Configure a target catalog (environment) and database (Kafka cluster) via {@code
+ * sql.current-catalog} / {@code sql.current-database} in {@code cloud.properties}; the run fails
+ * fast with a clear message if they are not set.
  */
-public class Example_09_Functions {
-
-    // Fill this with an environment you have write access to
-    static final String TARGET_CATALOG = "";
-
-    // Fill this with a Kafka cluster you have write access to
-    static final String TARGET_DATABASE = "";
+public class Example_08_Functions {
 
     // All logic is defined in a main() method. It can run both in an IDE or CI/CD system.
     public static void main(String[] args) {
         // Setup connection properties to Confluent Cloud
-        EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
+        EnvironmentSettings settings =
+                ConfluentSettings.newBuilderFromResource("/cloud.properties")
+                        .setApplicationName("functions")
+                        .applyArgs(args)
+                        .build();
 
         // Initialize the session context to get started
         TableEnvironment env = TableEnvironment.create(settings);
 
-        // Set default catalog and database
-        env.useCatalog(TARGET_CATALOG);
-        env.useDatabase(TARGET_DATABASE);
-
+        // Functions are registered in the current catalog/database, taken from the
+        // sql.current-catalog / sql.current-database configuration (see cloud.properties.template).
         System.out.println("Registering a scalar function...");
         // The Table API underneath creates a temporary JAR file containing all transitive classes
         // required to run the function, uploads it to Confluent Cloud, and registers the function

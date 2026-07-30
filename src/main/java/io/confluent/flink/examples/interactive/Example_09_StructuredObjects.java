@@ -1,4 +1,4 @@
-package io.confluent.flink.examples.table;
+package io.confluent.flink.examples.interactive;
 
 import io.confluent.flink.plugin.ConfluentSettings;
 
@@ -28,11 +28,15 @@ import static org.apache.flink.table.api.Expressions.withAllColumns;
  * and objects. Objects make it easier to organize information and pass information to and from
  * functions.
  */
-public class Example_10_StructuredObjects {
+public class Example_09_StructuredObjects {
 
     // All logic is defined in a main() method. It can run both in an IDE or CI/CD system.
     public static void main(String[] args) {
-        EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
+        EnvironmentSettings settings =
+                ConfluentSettings.newBuilderFromResource("/cloud.properties")
+                        .setApplicationName("structured-objects")
+                        .applyArgs(args)
+                        .build();
         TableEnvironment env = TableEnvironment.create(settings);
 
         // Flink SQL and the Table API can use Structured Data Types to represent complex objects.

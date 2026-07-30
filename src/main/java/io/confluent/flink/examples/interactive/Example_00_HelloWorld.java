@@ -1,4 +1,4 @@
-package io.confluent.flink.examples.table;
+package io.confluent.flink.examples.interactive;
 
 import io.confluent.flink.plugin.ConfluentSettings;
 import io.confluent.flink.plugin.ConfluentTools;
@@ -21,7 +21,11 @@ public class Example_00_HelloWorld {
     // All logic is defined in a main() method. It can run both in an IDE or CI/CD system.
     public static void main(String[] args) {
         // Setup connection properties to Confluent Cloud
-        EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
+        EnvironmentSettings settings =
+                ConfluentSettings.newBuilderFromResource("/cloud.properties")
+                        .setApplicationName("hello-world")
+                        .applyArgs(args)
+                        .build();
 
         // Initialize the session context to get started
         TableEnvironment env = TableEnvironment.create(settings);

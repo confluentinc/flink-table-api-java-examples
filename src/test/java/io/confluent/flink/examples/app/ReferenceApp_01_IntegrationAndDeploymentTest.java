@@ -1,4 +1,4 @@
-package io.confluent.flink.examples.table;
+package io.confluent.flink.examples.app;
 
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.EnvironmentSettings;
@@ -17,7 +17,7 @@ import static org.apache.flink.table.api.Expressions.row;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for the pipeline logic of {@link Example_08_IntegrationAndDeployment}.
+ * Unit tests for the pipeline logic of {@link ReferenceApp_01_IntegrationAndDeployment}.
  *
  * <p>These tests run entirely locally on Apache Flink with mock data from {@code fromValues()}. No
  * Confluent Cloud connectivity, credentials, or compute pool are required, which makes them
@@ -32,9 +32,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>ALSO NOTE: Running locally on Apache Flink is not identical to Confluent Cloud.
  * Confluent-specific features such as the {@code $rowtime} system column, the Confluent catalog,
  * and Confluent SQL extensions are not available locally. Use the integration tests (see {@code
- * Example_08_IntegrationAndDeploymentIT}) to verify behavior against the real service.
+ * ReferenceApp_01_IntegrationAndDeploymentIT}) to verify behavior against the real service.
  */
-class Example_08_IntegrationAndDeploymentTest {
+class ReferenceApp_01_IntegrationAndDeploymentTest {
 
     private static Table mockProducts(TableEnvironment env) {
         return env.fromValues(
@@ -53,7 +53,7 @@ class Example_08_IntegrationAndDeploymentTest {
         TableEnvironment env = TableEnvironment.create(EnvironmentSettings.inBatchMode());
 
         Table result =
-                Example_08_IntegrationAndDeployment.VendorsPerBrand.buildPipeline(
+                ReferenceApp_01_IntegrationAndDeployment.VendorsPerBrand.buildPipeline(
                         mockProducts(env));
 
         assertThat(collectRows(result))
@@ -68,7 +68,7 @@ class Example_08_IntegrationAndDeploymentTest {
         TableEnvironment env = TableEnvironment.create(EnvironmentSettings.inStreamingMode());
 
         Table result =
-                Example_08_IntegrationAndDeployment.VendorsPerBrand.buildPipeline(
+                ReferenceApp_01_IntegrationAndDeployment.VendorsPerBrand.buildPipeline(
                         mockProducts(env));
 
         List<Row> changelog = collectRows(result);

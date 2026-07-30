@@ -1,4 +1,4 @@
-package io.confluent.flink.examples.table;
+package io.confluent.flink.examples.interactive;
 
 import io.confluent.flink.plugin.ConfluentSettings;
 import io.confluent.flink.plugin.ConfluentTableDescriptor;
@@ -14,16 +14,12 @@ import java.util.List;
 /**
  * A table program example that illustrates how to create a table backed by a Kafka topic.
  *
- * <p>NOTE: This example requires write access to a Kafka cluster. Fill out the given variables
- * below with target catalog/database if this is fine for you.
+ * <p>NOTE: This example requires write access to a Kafka cluster. Configure a target catalog
+ * (environment) and database (Kafka cluster) via {@code sql.current-catalog} / {@code
+ * sql.current-database} in {@code cloud.properties}; the run fails fast with a clear message if
+ * they are not set.
  */
 public class Example_04_CreatingTables {
-
-    // Fill this with an environment you have write access to
-    static final String TARGET_CATALOG = "";
-
-    // Fill this with a Kafka cluster you have write access to
-    static final String TARGET_DATABASE = "";
 
     // Fill this with names of the Kafka Topics you want to create
     static final String TARGET_TABLE1 = "MyExampleTable1";
@@ -31,11 +27,15 @@ public class Example_04_CreatingTables {
 
     // All logic is defined in a main() method. It can run both in an IDE or CI/CD system.
     public static void main(String[] args) {
-        EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
+        EnvironmentSettings settings =
+                ConfluentSettings.newBuilderFromResource("/cloud.properties")
+                        .setApplicationName("creating-tables")
+                        .applyArgs(args)
+                        .build();
         TableEnvironment env = TableEnvironment.create(settings);
-        env.useCatalog(TARGET_CATALOG);
-        env.useDatabase(TARGET_DATABASE);
 
+        // Tables are created in the current catalog/database, taken from sql.current-catalog /
+        // sql.current-database in cloud.properties (see cloud.properties.template).
         System.out.println("Creating table... " + TARGET_TABLE1);
 
         // Create a table programmatically:

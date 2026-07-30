@@ -1,4 +1,4 @@
-package io.confluent.flink.examples.table;
+package io.confluent.flink.examples.interactive;
 
 import io.confluent.flink.plugin.ConfluentSettings;
 
@@ -14,7 +14,11 @@ public class Example_02_UnboundedTables {
 
     // All logic is defined in a main() method. It can run both in an IDE or CI/CD system.
     public static void main(String[] args) {
-        EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
+        EnvironmentSettings settings =
+                ConfluentSettings.newBuilderFromResource("/cloud.properties")
+                        .setApplicationName("unbounded-tables")
+                        .applyArgs(args)
+                        .build();
         TableEnvironment env = TableEnvironment.create(settings);
         env.useCatalog("examples");
         env.useDatabase("marketplace");
@@ -37,10 +41,15 @@ public class Example_02_UnboundedTables {
                 .execute()
                 .print();
 
-        System.out.println("Running unbounded statement...");
+        System.out.println(
+                "Running unbounded statement... this does not terminate on its own; press Ctrl+C to"
+                        + " stop it.");
 
-        // Confluent's unbounded streaming examples don't terminate and
-        // mock real-time data from Kafka
+        // Confluent's unbounded streaming examples don't terminate and mock real-time data from
+        // Kafka. Unlike the bounded statements above, print() keeps streaming results to the
+        // console forever, so you must interrupt the program (Ctrl+C) to stop it. To cap the
+        // output instead, use ConfluentTools.printMaterialized/printChangelog with a row limit
+        // (see Example_07).
         env.from("clicks")
                 .groupBy($("user_id"))
                 .select($("user_id"), $("view_time").sum())

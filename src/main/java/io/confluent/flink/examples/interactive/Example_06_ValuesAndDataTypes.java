@@ -1,4 +1,4 @@
-package io.confluent.flink.examples.table;
+package io.confluent.flink.examples.interactive;
 
 import io.confluent.flink.plugin.ConfluentSettings;
 
@@ -27,7 +27,11 @@ public class Example_06_ValuesAndDataTypes {
 
     // All logic is defined in a main() method. It can run both in an IDE or CI/CD system.
     public static void main(String[] args) {
-        EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
+        EnvironmentSettings settings =
+                ConfluentSettings.newBuilderFromResource("/cloud.properties")
+                        .setApplicationName("values-and-data-types")
+                        .applyArgs(args)
+                        .build();
         TableEnvironment env = TableEnvironment.create(settings);
 
         // Values for each data type can be created...
