@@ -73,8 +73,6 @@ for a local Flink cluster. By adding the `confluent-flink-table-api-java-plugin`
 `CatalogStore`, `Catalog`, `Planner`, `Executor`, and configuration are managed by the plugin and fully integrate with
 Confluent Cloud. Including access to Apache Kafka®, Schema Registry, and Flink Compute Pools.
 
-Note: The Table API plugin is in Open Preview stage. Take a look at the [Known Limitation](#known-limitations) section below.
-
 ### Motivating Example
 
 The following code shows how a Table API program is structured. Subsequent sections will go into more details how you
@@ -240,7 +238,7 @@ Change the current directory.
 cd flink-table-api-java-examples
 ```
 
-Use Maven to build a JAR file of the project. Make sure you have at least Java 11 installed.
+Use Maven to build a JAR file of the project. Make sure you have at least Java 17 installed.
 The included Maven wrapper `mvnw` is useful for a consistent Maven version, you don't need to install Maven.
 ```bash
 ./mvnw clean package
@@ -288,7 +286,7 @@ First, what does production-ready mean? Let's take the following assumptions:
 2. The non-secret connection information should be committed to the repository directly (e.g. org ID, compute pool ID, ...) and varies per deploy environment
 3. The API key secrets must NOT be committed to git, and are instead injected per deploy environment by CICD tools, and by local secret injection on each engineer's machine for `dev`.
 
-Now we can sketch an opinonated path to realize these requirements:
+Now we can sketch an opinionated path to realize these requirements:
 
 1. Setup 1 properties file per deploy environment with all necessary non-secret information, e.g. `cloud.properties` is replaced by `dev.properties`, `staging.properties`, `prod-noram.properties`, `prod-emea.properties`, and `prod-apac.properties`.
 2. Adjust the app code to remove hard-coded reference to `cloud.properties`. Instead follow the structure in `ReferenceApp_01_IntegrationAndDeployment` using `ConfluentSettings.newBuilder()` instead of `ConfluentSettings.newBuilderFromResource` to infer properties file from the environment.
@@ -1326,24 +1324,20 @@ env.createTable("t1", descriptor);
 
 ## Known Limitations
 
-The Table API plugin is in Open Preview stage.
-
 ### Unsupported by Table API Plugin
 
-The following feature are currently not supported:
+The following features are currently not supported:
 
 - Temporary catalog objects (including tables, views, functions)
 - Custom modules
 - Custom catalogs
 - Anonymous, inline objects (including functions, data types)
 - CompiledPlan features are not supported
-- Batch mode
 - Restrictions coming from Confluent Cloud
     - custom connectors/formats
     - processing time operations
     - many configuration options
     - limited SQL syntax
-    - batch execution mode
 
 ### Issues in Open Source Flink
 
