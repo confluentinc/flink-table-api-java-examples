@@ -526,7 +526,7 @@ Additional configuration:
 | `client.action.kind`                |                                |                              | N        | Lifecycle action for CI/CD integration. One of `list`, `describe`, `resume`, `stop`, `delete`. See [CI/CD with GitHub Actions](#cicd-integration).                                      |
 | `client.action.skip-exit`           |                                |                              | N        | Skip `System.exit()` after an action runs. Default: `false`.                                                                                                                                    |
 | `client.action.await`                       | `--action.await [<duration>]`          |                              | N        | When set, lifecycle actions (`resume`, `stop`, `delete`) block until the target phase is reached or `client.timeout` elapses. An optional duration overrides the timeout. Default: `false`.     |
-| `client.timeout`                    |                                |                              | N        | Maximum time to wait when `client.action.await` is set. For example: `5min` or `300s`. Default: `300s`.                                                                                                 |
+| `client.timeout`                    |                                |                              | N        | Maximum time to wait when `client.action.await` is set. For example: `5min` or `300s`. Default: `15min`.                                                                                                 |
 | `client.on-conflict`                | `--on-conflict`                | `ON_CONFLICT`                | N        | Behavior when a statement with the same name already exists with a different spec. `fail` (default) or `replace`. Requires `client.application-name`.                                           |
 | `client.rest-endpoint`              | `--rest-endpoint`              | `REST_ENDPOINT`              | N        | URL to the REST endpoint. For example: `proxyto.confluent.cloud`                                                                                                                                |
 | `client.catalog-cache`              |                                |                              | N        | Expiration time for catalog objects. For example: `5 min`. `1 min` by default. `0` disables the caching.                                                                                        |
@@ -844,7 +844,7 @@ phase being reached, pass `--action.await` to block until the action has fully t
 - `stop` waits until the statement reaches `STOPPED`.
 - `delete` waits until the statement does not exist.
 
-Tune the maximum wait by passing a duration directly to `--action.await` (e.g. `--action.await 10min`, default: `300s`). Durations
+Tune the maximum wait by passing a duration directly to `--action.await` (e.g. `--action.await 10min`, default: `15min`). Durations
 accept values like `30s`, `5min`, or `2h`. If no duration is passed the default timeout will be used. If the target
 phase is not reached before the timeout elapses, the action fails with exit code 1.
 
