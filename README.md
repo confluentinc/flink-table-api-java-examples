@@ -525,8 +525,8 @@ Additional configuration:
 | `client.statement-name`             | `--statement-name`             | `STATEMENT_NAME`             | N        | Unique name for statement submission. If an application name is set, it is prefixed. By default, generated using a UUID.                                                                        |
 | `client.action.kind`                |                                |                              | N        | Lifecycle action for CI/CD integration. One of `list`, `describe`, `resume`, `stop`, `delete`. See [CI/CD with GitHub Actions](#cicd-integration).                                      |
 | `client.action.skip-exit`           |                                |                              | N        | Skip `System.exit()` after an action runs. Default: `false`.                                                                                                                                    |
-| `client.wait`                       | `--wait [<duration>]`          |                              | N        | When set, lifecycle actions (`resume`, `stop`, `delete`) block until the target phase is reached or `client.timeout` elapses. An optional duration overrides the timeout. Default: `false`.     |
-| `client.timeout`                    |                                |                              | N        | Maximum time to wait when `client.wait` is set. For example: `5min` or `300s`. Default: `300s`.                                                                                                 |
+| `client.action.await`                       | `--action.await [<duration>]`          |                              | N        | When set, lifecycle actions (`resume`, `stop`, `delete`) block until the target phase is reached or `client.timeout` elapses. An optional duration overrides the timeout. Default: `false`.     |
+| `client.timeout`                    |                                |                              | N        | Maximum time to wait when `client.action.await` is set. For example: `5min` or `300s`. Default: `300s`.                                                                                                 |
 | `client.on-conflict`                | `--on-conflict`                | `ON_CONFLICT`                | N        | Behavior when a statement with the same name already exists with a different spec. `fail` (default) or `replace`. Requires `client.application-name`.                                           |
 | `client.rest-endpoint`              | `--rest-endpoint`              | `REST_ENDPOINT`              | N        | URL to the REST endpoint. For example: `proxyto.confluent.cloud`                                                                                                                                |
 | `client.catalog-cache`              |                                |                              | N        | Expiration time for catalog objects. For example: `5 min`. `1 min` by default. `0` disables the caching.                                                                                        |
@@ -838,17 +838,17 @@ If an application name is configured, it will be automatically prefixed to the s
 
 By default, `resume`, `stop`, and `delete` return as soon as the Confluent Cloud API has accepted the request: the
 statement may still be transitioning in the background. For CI/CD pipelines where the next step depends on the new
-phase being reached, pass `--wait` to block until the action has fully taken effect:
+phase being reached, pass `--action.await` to block until the action has fully taken effect:
 
 - `resume` waits until the statement reaches `RUNNING`.
 - `stop` waits until the statement reaches `STOPPED`.
 - `delete` waits until the statement does not exist.
 
-Tune the maximum wait by passing a duration directly to `--wait` (e.g. `--wait 10min`, default: `300s`). Durations
+Tune the maximum wait by passing a duration directly to `--action.await` (e.g. `--action.await 10min`, default: `300s`). Durations
 accept values like `30s`, `5min`, or `2h`. If no duration is passed the default timeout will be used. If the target
 phase is not reached before the timeout elapses, the action fails with exit code 1.
 
-The `list` and `describe` actions ignore `--wait`.
+The `list` and `describe` actions ignore `--action.await`.
 
 ### Examples
 
@@ -968,7 +968,7 @@ java -jar marketplace-analytics.jar resume \
 # Block until the statement reaches RUNNING (fails with exit 1 if not running within the timeout)
 java -jar marketplace-analytics.jar resume \
   --statement-name marketplace-query \
-  --wait 10min \
+  --action.await 10min \
   --application-name marketplace-analytics \
   # ... other configuration
 ```
@@ -992,7 +992,7 @@ java -jar marketplace-analytics.jar stop \
 # Block until the statement reaches STOPPED (fails with exit 1 if not stopped within the timeout)
 java -jar marketplace-analytics.jar stop \
   --statement-name marketplace-query \
-  --wait 10min \
+  --action.await 10min \
   --application-name marketplace-analytics \
   # ... other configuration
 ```
@@ -1016,7 +1016,7 @@ java -jar marketplace-analytics.jar delete \
 # Block until the statement is fully deleted (fails with exit 1 if not deleted within the timeout)
 java -jar marketplace-analytics.jar delete \
   --statement-name marketplace-query \
-  --wait 10min \
+  --action.await 10min \
   --application-name marketplace-analytics \
   # ... other configuration
 ```
@@ -1338,6 +1338,18 @@ The following features are currently not supported:
     - processing time operations
     - many configuration options
     - limited SQL syntax
+
+### Statement Management
+
+- In-place modification of a running statement is not supported. To change the logic of a statement, delete and
+  re-create it, which loses processing state. This behavior is the same as for Flink SQL statements.
+- Statement names must contain only lowercase alphanumeric characters and hyphens, must start and end with an
+  alphanumeric character, and have a maximum length of 100 characters, including the application name prefix.
+- Lifecycle actions on a built JAR require that the `main()` method parses command-line arguments with
+  `ConfluentSettings.fromArgs` or `ConfluentSettings.newBuilderFromArgs`. See the [CI/CD Integration](#cicd-integration)
+  section.
+- The plugin does not include a local Apache Flink runtime; all statements run on Confluent Cloud. For local testing
+  patterns, see [Testing Table Programs](#testing-table-programs).
 
 ### Issues in Open Source Flink
 
