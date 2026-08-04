@@ -10,8 +10,9 @@ This repository contains examples for running Apache Flink's Table API on Conflu
 - [Developer Journey](#developer-journey)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
+  - [Configure Table API Connection](#configure-table-api-connection)
   - [Run Examples](#run-examples)
-  - [Configure the cloud.properties File](#configure-the-cloudproperties-file)
+  - [Production-ready Configuration](#production-ready-configuration)
   - [Table API Playground using JShell](#table-api-playground-using-jshell)
   - [How to Continue](#how-to-continue)
 - [Configuration](#configuration)
@@ -19,6 +20,7 @@ This repository contains examples for running Apache Flink's Table API on Conflu
   - [Via Command-Line arguments](#via-command-line-arguments)
   - [Via Code](#via-code)
   - [Via Environment Variables](#via-environment-variables)
+  - [Combining a Base Configuration with Command-Line arguments](#combining-a-base-configuration-with-command-line-arguments)
   - [Configuration Options](#configuration-options)
   - [Authentication](#authentication)
   - [Endpoint Configuration](#endpoint-configuration)
@@ -43,7 +45,6 @@ This repository contains examples for running Apache Flink's Table API on Conflu
   - [Confluent Table Descriptor](#confluent-table-descriptor)
 - [Known Limitations](#known-limitations)
   - [Unsupported by Table API Plugin](#unsupported-by-table-api-plugin)
-  - [Statement Management](#statement-management)
   - [Issues in Open Source Flink](#issues-in-open-source-flink)
   - [Supported API](#supported-api)
 - [Support](#support)
@@ -72,8 +73,6 @@ for a local Flink cluster. By adding the `confluent-flink-table-api-java-plugin`
 `CatalogStore`, `Catalog`, `Planner`, `Executor`, and configuration are managed by the plugin and fully integrate with
 Confluent Cloud. Including access to Apache Kafka®, Schema Registry, and Flink Compute Pools.
 
-Note: The Table API for Java is generally available. Take a look at the [Known Limitations](#known-limitations) section below.
-
 ### Motivating Example
 
 The following code shows how a Table API program is structured. Subsequent sections will go into more details how you
@@ -91,8 +90,11 @@ import java.util.List;
 //   - uses Apache Flink's APIs
 //   - communicates to Confluent Cloud via REST calls
 public static void main(String[] args) {
-  // Set up the connection to Confluent Cloud
-  EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
+  // Set up the connection to Confluent Cloud. newBuilderFromResource reads the bundled
+  // /cloud.properties file (safe config) with environment variables as a fallback for secrets,
+  // and applyArgs layers any command-line arguments on top.
+  EnvironmentSettings settings =
+      ConfluentSettings.newBuilderFromResource("/cloud.properties").applyArgs(args).build();
   TableEnvironment env = TableEnvironment.create(settings);
 
   // Run your first Flink statement in Table API
@@ -139,15 +141,20 @@ public static void main(String[] args) {
 ## Developer Journey
 
 The examples in this repository follow the journey of taking a table program from a first
-experiment all the way to a production deployment:
+experiment all the way to a production deployment. They are organized into two packages by theme:
+
+- `io.confluent.flink.examples.interactive` — self-contained programs that run inline and print
+  their results to the console, for learning the Table API (`Example_XX`).
+- `io.confluent.flink.examples.app` — deployable "apps" that submit long-running background
+  statements and are managed via the CI/CD lifecycle actions (`ReferenceApp_XX`).
 
 | Stage | What you do | Where to look |
 |-------|-------------|---------------|
 | Get started | Configure a connection to Confluent Cloud and run a first program | `Example_00` - `Example_02`, [Getting Started](#getting-started) |
-| Build | Transform tables, build pipelines, work with data types, UDFs, and structured objects | `Example_03` - `Example_07`, `Example_09` - `Example_11`, `TableProgramTemplate` |
+| Build | Transform tables, build pipelines, work with data types, UDFs, and (stateful) process table functions | `Example_03` - `Example_11` |
 | Test locally | Run unit tests on mock data, without Confluent Cloud connectivity | `src/test/java/`, [Testing Table Programs](#testing-table-programs) |
-| Test on Confluent Cloud | Run integration tests against the real service | `Example_08_IntegrationAndDeploymentIT`, [Testing Table Programs](#testing-table-programs) |
-| Deploy | Submit statements with deterministic names from a CI/CD pipeline | `Example_08_IntegrationAndDeployment`, [CI/CD with GitHub Actions](#cicd-with-github-actions) |
+| Test on Confluent Cloud | Run integration tests against the real service | `ReferenceApp_01_IntegrationAndDeploymentIT`, [Testing Table Programs](#testing-table-programs) |
+| Deploy | Submit statements with deterministic names from a CI/CD pipeline | `ReferenceApp_01_IntegrationAndDeployment`, `ReferenceApp_02_ProcessTableFunction`, [CI/CD with GitHub Actions](#cicd-integration) |
 | Operate | List, describe, stop, resume, and delete deployed statements | `.github/workflows-examples/manage.yml` |
 
 ## Getting Started
@@ -162,20 +169,67 @@ experiment all the way to a production deployment:
 4. Optional: [Create a Kafka cluster](https://docs.confluent.io/cloud/current/clusters/create-cluster.html#manage-ak-clusters-on-ccloud)
    if you want to run examples that store data in Kafka
 
+### Configure Table API Connection
+
+The quickest way to get connected (examples 00–11):
+
+1. Create your local, git-ignored config file from the template:
+   ```bash
+   cp src/main/resources/cloud.properties.template src/main/resources/cloud.properties
+   ```
+2. Fill in the required keys. Since `cloud.properties` is git-ignored, it's safe to add credentials there
+   directly too — or set them as the equivalent environment variables instead
+   (`GLOBAL_API_KEY`/`GLOBAL_API_SECRET`).
+
+   | Key                          | What it is                          | Where to find it                                                                                                                                        |
+   |-------------------------------|--------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+   | `client.cloud`                | Cloud provider of your compute pool | [**Menu** → **Environments**](https://confluent.cloud/environments) → your environment → **Flink** → your compute pool                                  |
+   | `client.region`               | Region of your compute pool         | same page as above                                                                                                                                        |
+   | `client.organization-id`      | ID of your organization             | [**Menu** → **Settings** → **Organizations**](https://confluent.cloud/settings/organizations)                                                            |
+   | `client.environment-id`       | ID of your environment              | [**Menu** → **Environments**](https://confluent.cloud/environments)                                                                                      |
+   | `client.compute-pool-id`      | ID of your compute pool             | [**Menu** → **Environments**](https://confluent.cloud/environments) → your environment → **Flink** → your compute pool                                  |
+   | `client.global-api-key`       | Cloud API key (Flink + artifacts)   | [**Menu** → **Settings** → **API keys**](https://confluent.cloud/settings/api-keys)                                                                      |
+   | `client.global-api-secret`    | Cloud API secret (Flink + artifacts) | [**Menu** → **Settings** → **API keys**](https://confluent.cloud/settings/api-keys)                                                                      |
+
+That's enough to run the interactive examples directly.
+
+There are two ways to supply this configuration, and it helps to know which is which:
+
+- **Hard-coded `cloud.properties`** — used by the interactive examples via `ConfluentSettings.newBuilderFromResource(...)`. This is the simplest way to get set up locally: one file with everything filled in.
+- **Dynamic environment variables & properties files** — used by the reference apps via `ConfluentSettings.newBuilder()`, and loaded from `.env` by the `bin/` scripts. This suits production and CI/CD: secrets stay out of committed files, and the same build binds to different configuration per deploy stage or region without code changes.
+
+For the production-oriented setup see [Production-ready Configuration](#production-ready-configuration); for the full set of configuration options see [Configuration](#configuration).
+
 ### Run Examples
 
 Examples are runnable from the command-line or an IDE. Command-line is convenient for CI/CD integration. IDE is
 recommended for development, debugging, and playing around in an interactive manner.
 
-All example files are located in `src/main/java/io/confluent/flink/examples/table`. Each file contains a Java `main()`
+The numbered learning examples live in `src/main/java/io/confluent/flink/examples/interactive/` (the
+deployable reference apps are in `app/`, and the shared functions they use in `functions/`). Each file contains a Java `main()`
 method with a table program that can be executed individually. Every example program covers a different topic to learn
 more about how Table API can be used. It is recommended to go through the examples in the defined order as they partially
 build on top of each other.
+
+The first few examples are read-only and run against the shared `examples.marketplace` catalog out of the box. Examples that
+create tables, register functions, or submit statements additionally need a current catalog and database with write
+access — set `sql.current-catalog` (your environment) and `sql.current-database` (a Kafka cluster) in `cloud.properties`
+(see the documented keys in `cloud.properties.template`). Each example's docstring says whether it writes to Confluent Cloud.
 
 Clone this repository to your local computer, or download it as a ZIP file and extract it.
 ```bash
 git clone https://github.com/confluentinc/flink-table-api-java-examples.git
 ```
+
+#### Via Provided Script
+
+Two convenience scripts load `.env` (connection config + secrets), build the JAR if needed, and run:
+```bash
+./bin/run.sh Example_00_HelloWorld                                     # run an example
+./bin/run.sh ReferenceApp_01_IntegrationAndDeployment --statement-name demo # pass program args
+./bin/jshell.sh                                                        # interactive JShell session
+```
+Builds, tests, and cleanup are plain Maven commands: `./mvnw package`, `./mvnw test`, `./mvnw clean`.
 
 #### Via Command-Line
 
@@ -194,14 +248,13 @@ Run an example from the JAR file. No worries the program is read-only, so it won
 Kafka clusters. All results will be printed to the console.
 ```bash
 cd target
-java -cp flink-table-api-java-examples-1.0.jar io.confluent.flink.examples.table.Example_00_HelloWorld
+java -cp flink-table-api-java-examples-1.0.jar io.confluent.flink.examples.interactive.Example_00_HelloWorld
 ```
 
-An output similar to the following means that you are able to run the examples:
+An output similar to the following means that you are able to run the examples, but require some configuration of your cloud connection:
 ```text
 Exception in thread "main" io.confluent.flink.plugin.ConfluentFlinkException: Parameter 'client.organization-id' not found.
 ```
-Configuration will be covered in the next section.
 
 #### Via IDE
 
@@ -221,39 +274,56 @@ Exception in thread "main" io.confluent.flink.plugin.ConfluentFlinkException: Pa
 ```
 Configuration will be covered in the next section.
 
-### Configure the `cloud.properties` File
+### Production-ready Configuration
 
-The Table API plugin needs a set of configuration options for establishing a connection to Confluent Cloud.
+Above we covered the minimal configuration setup via `.properties` file. For a full set of configuration options and patterns, see [Configuration](#configuration).
 
-For experimenting with Table API, configuration with a properties file might be the most convenient option.
-The examples read from this file by default.
+But what should your config setup look like for a production-ready app? Let's go over an opinionated setup and the rationale behind it.
 
-Update the file under `src/main/resources/cloud.properties` with your Confluent Cloud information.
+First, what does production-ready mean? Let's take the following assumptions:
 
-All required information can be found in the web UI of Confluent's Cloud Console:
-- `client.organization-id` from [**Menu** → **Settings** → **Organizations**](https://confluent.cloud/settings/organizations)
-- `client.environment-id` from [**Menu** → **Environments**](https://confluent.cloud/environments)
-- `client.cloud`, `client.region`, `client.compute-pool-id` from [**Menu** → **Environments**](https://confluent.cloud/environments) → **your environment** → **Flink** → **your compute pool**
-- `client.flink-api-key`, `client.flink-api-secret` from [**Menu** → **Settings** → **API keys**](https://confluent.cloud/settings/api-keys)
+1. The app should be deployed across multiple environments (e.g. `dev` -> `staging` -> `production` with potential fan-out to multiple production regions)
+2. The non-secret connection information should be committed to the repository directly (e.g. org ID, compute pool ID, ...) and varies per deploy environment
+3. The API key secrets must NOT be committed to git, and are instead injected per deploy environment by CICD tools, and by local secret injection on each engineer's machine for `dev`.
 
-Examples should be runnable after setting all configuration options correctly.
+Now we can sketch an opinionated path to realize these requirements:
+
+1. Setup 1 properties file per deploy environment with all necessary non-secret information, e.g. `cloud.properties` is replaced by `dev.properties`, `staging.properties`, `prod-noram.properties`, `prod-emea.properties`, and `prod-apac.properties`.
+2. Adjust the app code to remove hard-coded reference to `cloud.properties`. Instead follow the structure in `ReferenceApp_01_IntegrationAndDeployment` using `ConfluentSettings.newBuilder()` instead of `ConfluentSettings.newBuilderFromResource` to infer properties file from the environment.
+    ```
+    EnvironmentSettings settings = ConfluentSettings.newBuilder()
+        .setApplicationName("<app-name>")
+        .applyArgs(args)
+        .build();
+    ```
+3. To repair your local setup, create a `.env` file which contains your `dev` API key and a pointer to `dev.properties`.
+    ```
+    FLINK_PROPERTIES=./src/main/resources/dev.properties
+    GLOBAL_API_KEY=<key>
+    GLOBAL_API_SECRET=<secret>
+    ```
+4. From your CICD tool, use your secret management tool of choice to load the appropriate API key secrets and `FLINK_PROPERTIES` value per deploy environment.
 
 ### Table API Playground using JShell
 
 For convenience, the repository also contains a [JShell](https://openjdk.org/jeps/222) init script for playing around with
 Table API in an interactive manner.
 
-1. Switch into the `flink-table-api-java-examples` directory.
+1. Fill in your configuration and secrets as described in
+   [Configure Table API Connection](#configure-table-api-connection). JShell connects via
+   `ConfluentSettings.fromGlobalVariables()`, so it reads the connection options and secrets from the
+   environment (loaded from `.env`).
 
-2. Run `mvn clean package` to build a JAR file.
+2. Start the session — the script loads `.env` and builds the JAR if needed:
+   ```bash
+   ./bin/jshell.sh
+   ```
+   (Equivalent to building with `./mvnw package` and then running `jshell --class-path
+   ./target/flink-table-api-java-examples-1.0.jar --startup ./jshell-init.jsh` with `.env` loaded.)
 
-3. Point to the `cloud.properties` file: `export FLINK_PROPERTIES=./src/main/resources/cloud.properties`
+3. The `TableEnvironment` is pre-initialized from the configuration above and available under `env`.
 
-4. Start the shell with `jshell --class-path ./target/flink-table-api-java-examples-1.0.jar --startup ./jshell-init.jsh`
-
-5. The `TableEnvironment` is pre-initialized from environment variables and available under `env`.
-
-6. Run your first "Hello world!" using `env.executeSql("SELECT 'Hello world!'").print();`
+4. Run your first "Hello world!" using `env.executeSql("SELECT 'Hello world!'").print();`
 
 ### How to Continue
 
@@ -286,23 +356,27 @@ The Table API plugin needs a set of configuration options for establishing a con
 
 The `ConfluentSettings` class is a utility for providing configuration options from various sources.
 
-For production, external input, code, and environment variables can be combined.
+For production, a properties file, command-line arguments, code, and environment variables can be
+combined.
 
-Precedence order (highest to lowest):
-1. CLI Arguments or Properties File
-2. Code
-3. Environment Variables
+**Resolution order.** Command-line arguments (via `applyArgs`), the properties file, and builder
+setters all write into the same configuration, where the **last writer wins** (in call order).
+Environment variables act as a **fallback**: they are consulted only for keys not otherwise set. For
+the recommended chain below, the effective precedence (highest to lowest) is:
+
+1. Command-line arguments (`applyArgs`)
+2. Properties file and code setters
+3. Environment variables (fallback — e.g. secrets)
 
 A multi-layered configuration can look like:
 ```java
 public static void main(String[] args) {
-  // Args might set cloud, region, org, env, and compute pool.
-  // Environment variables might pass key and secret.
-
-  // Code sets the application name and SQL-specific options.
-  ConfluentSettings settings = ConfluentSettings.newBuilderFromArgs(args)
-      .setApplicationName("my-table-program")
+  // newBuilder() reads the FLINK_PROPERTIES file (if set) and environment variables (secrets).
+  // Code sets defaults; applyArgs(args) overrides them per invocation.
+  EnvironmentSettings settings = ConfluentSettings.newBuilder()
+      .setApplicationName("my-table-program")       // overridable by --application-name
       .setOption("sql.local-time-zone", "UTC")
+      .applyArgs(args)
       .build();
 
   TableEnvironment env = TableEnvironment.create(settings);
@@ -399,6 +473,20 @@ ConfluentSettings settings = ConfluentSettings.fromGlobalVariables();
 
 A path to a properties file can also be specified by setting the environment variable `FLINK_PROPERTIES`.
 
+### Combining a Base Configuration with Command-Line arguments
+
+Use `applyArgs` to layer command-line arguments on top of an existing builder. This lets a single program combine a
+base configuration (from a properties file, for example) with per-invocation arguments:
+
+```java
+public static void main(String[] args) {
+  ConfluentSettings settings = ConfluentSettings.newBuilder() // FLINK_PROPERTIES file + environment-variable fallback
+    .setApplicationName("my-table-program")                   // code default, overridable by --application-name
+    .applyArgs(args)                                          // per-invocation overrides
+    .build();
+}
+```
+
 ### Configuration Options
 
 The following configuration needs to be provided:
@@ -435,10 +523,10 @@ Additional configuration:
 | `client.principal-id`               | `--principal-id`               | `PRINCIPAL_ID`               | N        | Principal that runs submitted statements. For example: `sa-23kgz4` (for a service account)                                                                                                      |
 | `client.application-name`           | `--application-name`           | `APPLICATION_NAME`           | N        | A name for this Table API application. Serves as a namespace prefix for all statement names. Lowercase alphanumeric characters and hyphens only, max 100 chars. For example: `my-table-program` |
 | `client.statement-name`             | `--statement-name`             | `STATEMENT_NAME`             | N        | Unique name for statement submission. If an application name is set, it is prefixed. By default, generated using a UUID.                                                                        |
-| `client.action.kind`                |                                |                              | N        | Lifecycle action for CI/CD integration. One of `list`, `describe`, `resume`, `stop`, `delete`. See [CI/CD with GitHub Actions](#cicd-with-github-actions).                                      |
+| `client.action.kind`                |                                |                              | N        | Lifecycle action for CI/CD integration. One of `list`, `describe`, `resume`, `stop`, `delete`. See [CI/CD with GitHub Actions](#cicd-integration).                                      |
 | `client.action.skip-exit`           |                                |                              | N        | Skip `System.exit()` after an action runs. Default: `false`.                                                                                                                                    |
-| `client.action.await`               | `--action.await [<duration>]`  |                              | N        | When set, lifecycle actions (`resume`, `stop`, `delete`) block until the target phase is reached or `client.timeout` elapses. An optional duration overrides the timeout. Default: `false`.     |
-| `client.timeout`                    |                                |                              | N        | Maximum time to wait when `client.action.await` is set. For example: `5min` or `900s`. Default: `15min`.                                                                                        |
+| `client.action.await`                       | `--action.await [<duration>]`          |                              | N        | When set, lifecycle actions (`resume`, `stop`, `delete`) block until the target phase is reached or `client.timeout` elapses. An optional duration overrides the timeout. Default: `false`.     |
+| `client.timeout`                    |                                |                              | N        | Maximum time to wait when `client.action.await` is set. For example: `5min` or `300s`. Default: `15min`.                                                                                                 |
 | `client.on-conflict`                | `--on-conflict`                | `ON_CONFLICT`                | N        | Behavior when a statement with the same name already exists with a different spec. `fail` (default) or `replace`. Requires `client.application-name`.                                           |
 | `client.rest-endpoint`              | `--rest-endpoint`              | `REST_ENDPOINT`              | N        | URL to the REST endpoint. For example: `proxyto.confluent.cloud`                                                                                                                                |
 | `client.catalog-cache`              |                                |                              | N        | Expiration time for catalog objects. For example: `5 min`. `1 min` by default. `0` disables the caching.                                                                                        |
@@ -598,21 +686,23 @@ Table programs can be tested in three tiers, from fastest feedback to highest fi
 
 1. **Unit tests on plain logic.** UDFs and other business logic are plain Java classes and can be
    tested with JUnit alone: no Apache Flink, no Confluent Cloud connectivity, and no artifact
-   upload required. See `Example_09_FunctionsTest`.
+   upload required. See `Example_08_FunctionsTest`.
 2. **Local pipeline tests on Apache Flink.** Pipeline logic that is structured as
    a function from input `Table`s to an output `Table` (see `VendorsPerBrand` in
-   `Example_08_IntegrationAndDeployment`) can be executed locally with mock data from
+   `ReferenceApp_01_IntegrationAndDeployment`) can be executed locally with mock data from
    `fromValues()`, without Confluent Cloud connectivity. See
-   `Example_08_IntegrationAndDeploymentTest` and run with `./mvnw test`.
+   `ReferenceApp_01_IntegrationAndDeploymentTest` and run with `./mvnw test`.
 3. **Integration tests against Confluent Cloud.** The same pipeline logic runs on the real
    service with the exact Confluent semantics, on a Kafka-backed table that is made bounded with
-   dynamic options. See `Example_08_IntegrationAndDeploymentIT` and run with `./mvnw verify`.
-   These tests require the connection environment variables (see
-   [Via Environment Variables](#via-environment-variables)) plus `TARGET_CATALOG` (the name of
-   your Confluent Cloud environment) and `TARGET_DATABASE` (the name of a Kafka cluster with
-   write access), and fail fast when any are missing, so a CI pipeline cannot silently skip its
-   verification step and still report success. To build without Confluent Cloud credentials on
-   purpose, skip them explicitly: `./mvnw verify -DskipITs`.
+   dynamic options. See `ReferenceApp_01_IntegrationAndDeploymentIT` and run with `./mvnw verify`.
+   These tests require the connection configuration (see
+   [Via Environment Variables](#via-environment-variables)) plus a current catalog and database
+   (`sql.current-catalog` / `sql.current-database`) pointing to a Confluent environment and a Kafka
+   cluster with write access, since they provision a mock Kafka-backed table. A run without that
+   configuration fails rather than silently skipping. Note that `verify` runs against your live
+   environment: it creates and drops a real Kafka topic and consumes compute (CFUs) while it runs.
+   To build without Confluent Cloud credentials on purpose, skip the integration tests explicitly:
+   `./mvnw verify -DskipITs`.
 
 ### How local testing works
 
@@ -685,15 +775,16 @@ Actions are specified as the first argument that is not prefixed with `--` when 
 Only one action is allowed per execution.
 
 **Important**: To use this feature, your Table API application must parse command-line arguments using
-`ConfluentSettings.fromArgs(args)` or `ConfluentSettings.newBuilderFromArgs(args)` in its `main()` method.
-When an action is detected, it will be executed and the JVM will terminate early (via `System.exit()`),
-preventing the rest of your application logic from running.
+`ConfluentSettings.fromArgs(args)`, `ConfluentSettings.newBuilderFromArgs(args)`, or `applyArgs(args)`
+on a builder (as `ReferenceApp_01_IntegrationAndDeployment` does) in its `main()` method. When an action is
+detected, it will be executed and the JVM will terminate early (via `System.exit()`), preventing the
+rest of your application logic from running.
 
 ```java
 public static void main(String[] args) {
     // This will automatically detect and execute actions if present
     // If an action is specified, the program will exit here
-    EnvironmentSettings settings = ConfluentSettings.fromArgs(args);
+    EnvironmentSettings settings = ConfluentSettings.newBuilder().applyArgs(args).build();
     TableEnvironment env = TableEnvironment.create(settings);
 
     // Your application logic here (only runs if no action was specified)
@@ -753,9 +844,9 @@ phase being reached, pass `--action.await` to block until the action has fully t
 - `stop` waits until the statement reaches `STOPPED`.
 - `delete` waits until the statement does not exist.
 
-Tune the maximum wait by passing a duration directly to `--action.await` (e.g. `--action.await 10min`, default:
-`15min`). Durations accept values like `30s`, `5min`, or `2h`. If no duration is passed the default timeout will be
-used. If the target phase is not reached before the timeout elapses, the action fails with exit code 1.
+Tune the maximum wait by passing a duration directly to `--action.await` (e.g. `--action.await 10min`, default: `15min`). Durations
+accept values like `30s`, `5min`, or `2h`. If no duration is passed the default timeout will be used. If the target
+phase is not reached before the timeout elapses, the action fails with exit code 1.
 
 The `list` and `describe` actions ignore `--action.await`.
 
@@ -969,9 +1060,10 @@ The repository contains workflows that show how a table program moves through a 
 - `.github/workflows-examples/deploy.yml` is a template for your own repository: it runs the
   integration tests against Confluent Cloud and then deploys the program by running its `main()`
   method with `--statement-name`, `--application-name`, and `--on-conflict replace`. The statement
-  and application names are deployment configuration passed by the pipeline (not hardcoded in the
-  program), so the same name is used for deployment and for management; the application name is
-  prefixed to the statement name on submission (e.g. `marketplace-analytics-vendors-per-brand`).
+  name is deployment configuration passed by the pipeline, and the application name has a default set
+  in the program that the pipeline overrides with `--application-name`, so the same names are used for
+  deployment and for management; the application name is prefixed to the statement name on submission
+  (e.g. `marketplace-analytics-vendors-per-brand`).
   Re-running with unchanged code is idempotent, and a changed pipeline replaces the existing
   statement under the same name.
 
@@ -991,8 +1083,8 @@ The workflows authenticate via the environment variables described in
 [Via Environment Variables](#via-environment-variables), mapped from GitHub Actions secrets. The
 target environment and Kafka cluster are selected with the `sql.current-catalog` and
 `sql.current-database` configuration options: the deploy workflow passes them on the command line
-(from the `TARGET_CATALOG` and `TARGET_DATABASE` secrets), and the integration tests read those
-same variables. Because they are deployment configuration rather than source constants,
+(from the `TARGET_CATALOG` and `TARGET_DATABASE` secrets); the integration tests select the target
+the same way, via `sql.current-catalog` / `sql.current-database`. Because they are deployment configuration rather than source constants,
 staging-to-production promotion is a matter of running the same deploy job against different GitHub
 environments, each providing its own secrets and protection rules.
 
@@ -1239,11 +1331,8 @@ The following features are currently not supported:
 - Temporary catalog objects (including tables, views, functions)
 - Custom modules
 - Custom catalogs
-- Anonymous, inline objects (including data types). Inline functions must be serializable by class name, so use a
-  top-level class or a static nested class, not an anonymous inner class.
-- Inline functions in `createView`
-- CompiledPlan features
-- Batch mode
+- Anonymous, inline objects (including functions, data types)
+- CompiledPlan features are not supported
 - Restrictions coming from Confluent Cloud
     - custom connectors/formats
     - processing time operations

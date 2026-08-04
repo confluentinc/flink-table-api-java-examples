@@ -1,4 +1,4 @@
-package io.confluent.flink.examples.table;
+package io.confluent.flink.examples.interactive;
 
 import io.confluent.flink.plugin.ConfluentSettings;
 import io.confluent.flink.plugin.ConfluentTableDescriptor;
@@ -21,19 +21,15 @@ import static org.apache.flink.table.api.Expressions.row;
 /**
  * A table program example that demos how to pipe data into a table or multiple tables.
  *
- * <p>NOTE: This example requires write access to a Kafka cluster. Fill out the given variables
- * below with target catalog/database if this is fine for you.
+ * <p>NOTE: This example requires write access to a Kafka cluster. Configure a target catalog
+ * (environment) and database (Kafka cluster) via {@code sql.current-catalog} / {@code
+ * sql.current-database} in {@code cloud.properties}; the run fails fast with a clear message if
+ * they are not set.
  *
  * <p>ALSO NOTE: The example submits an unbounded background statement. Make sure to stop the
  * statement in the Web UI afterward to clean up resources.
  */
 public class Example_05_TablePipelines {
-
-    // Fill this with an environment you have write access to
-    static final String TARGET_CATALOG = "";
-
-    // Fill this with a Kafka cluster you have write access to
-    static final String TARGET_DATABASE = "";
 
     // Fill this with names of the Kafka Topics you want to create
     static final String TARGET_TABLE1 = "PricePerProduct";
@@ -41,11 +37,15 @@ public class Example_05_TablePipelines {
 
     // All logic is defined in a main() method. It can run both in an IDE or CI/CD system.
     public static void main(String[] args) throws ExecutionException, InterruptedException {
-        EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
+        EnvironmentSettings settings =
+                ConfluentSettings.newBuilderFromResource("/cloud.properties")
+                        .setApplicationName("table-pipelines")
+                        .applyArgs(args)
+                        .build();
         TableEnvironment env = TableEnvironment.create(settings);
-        env.useCatalog(TARGET_CATALOG);
-        env.useDatabase(TARGET_DATABASE);
 
+        // Tables are created in the current catalog/database, taken from sql.current-catalog /
+        // sql.current-database in cloud.properties (see cloud.properties.template).
         System.out.println("Creating tables... " + List.of(TARGET_TABLE1, TARGET_TABLE2));
 
         // Create two helper tables that will be filled with data from examples

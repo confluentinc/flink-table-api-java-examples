@@ -83,6 +83,7 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
@@ -232,7 +233,7 @@
                                         implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                                 <transformer
                                         implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>io.confluent.flink.examples.table.Example_00_HelloWorld</mainClass>
+                                    <mainClass>io.confluent.flink.examples.interactive.Example_00_HelloWorld</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>

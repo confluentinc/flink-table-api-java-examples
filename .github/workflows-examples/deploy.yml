@@ -1,6 +1,6 @@
 # EXAMPLE WORKFLOW - copy this file to .github/workflows/ in your own repository.
 # It lives in workflows-examples/ because this examples repository does not deploy to a
-# real Confluent Cloud environment. It tests, deploys Example_08_IntegrationAndDeployment,
+# real Confluent Cloud environment. It tests, deploys ReferenceApp_01_IntegrationAndDeployment,
 # then lists the result. See the README's CI/CD section for the deployment model and the
 # required secrets.
 name: Deploy Table API Program
@@ -58,7 +58,7 @@ jobs:
         # pipeline restarts from its configured source offsets without resuming prior state
         # (see the README CI/CD section).
         run: >
-          java -cp target/flink-table-api-java-examples-1.0.jar io.confluent.flink.examples.table.Example_08_IntegrationAndDeployment
+          java -cp target/flink-table-api-java-examples-1.0.jar io.confluent.flink.examples.app.ReferenceApp_01_IntegrationAndDeployment
           --statement-name "$STATEMENT_NAME"
           --application-name "$APPLICATION_NAME"
           --sql.current-catalog "$TARGET_CATALOG"
@@ -69,6 +69,6 @@ jobs:
         # Submitting a background statement returns once Confluent Cloud accepts it, so
         # list reports the statement and its phase for visibility in the log.
         run: >
-          java -cp target/flink-table-api-java-examples-1.0.jar io.confluent.flink.examples.table.Example_08_IntegrationAndDeployment
+          java -cp target/flink-table-api-java-examples-1.0.jar io.confluent.flink.examples.app.ReferenceApp_01_IntegrationAndDeployment
           list
           --application-name "$APPLICATION_NAME"

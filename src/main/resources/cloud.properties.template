@@ -21,10 +21,19 @@
 #client.environment-id=env-xxxxx
 #client.compute-pool-id=lfcp-xxxxxxxxxx
 
-# Security
-#client.flink-api-key=XXXXXXXXXXXXXXXX
-#client.flink-api-secret=XxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXx
+# Target catalog and database: the default environment and Kafka cluster that unqualified table
+# names resolve to (equivalent to env.useCatalog(...) / env.useDatabase(...) in code).
+#   - sql.current-catalog:  a Confluent environment name (or ID).
+#   - sql.current-database: a Kafka cluster name (or ID) within that environment.
+# Examples that create tables, register functions, or submit statements require these, and the API
+# key set below must have WRITE access to the Kafka cluster. Each example's docstring says whether
+# it writes.
+#sql.current-catalog=MyEnv
+#sql.current-database=my_db
 
-# Secrets required for uploading function artifacts
-#client.artifact-api-key=XXXXXXXXXXXXXXXX
-#client.artifact-api-secret=XxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXxXx
+# --- Secrets (keep these out of any committed file) ---
+# A single global (Cloud) API key covers both Flink access and artifact uploads.
+# See README "Authentication" for all options.
+# Supply via .env instead if you wish to commit this properties file to git
+#client.global-api-key=
+#client.global-api-secret=

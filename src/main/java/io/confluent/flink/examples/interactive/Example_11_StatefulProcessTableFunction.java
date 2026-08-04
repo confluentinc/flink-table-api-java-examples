@@ -1,4 +1,4 @@
-package io.confluent.flink.examples.table;
+package io.confluent.flink.examples.interactive;
 
 import io.confluent.flink.plugin.ConfluentSettings;
 import io.confluent.flink.plugin.ConfluentTableDescriptor;
@@ -26,12 +26,12 @@ import static org.apache.flink.table.api.Expressions.row;
  * A table program example illustrating the <b>stateful</b> side of a {@link ProcessTableFunction}
  * (PTF) and how its state survives a full stop/resume lifecycle on Confluent Cloud.
  *
- * <p>Where {@link Example_11_ProcessTableFunction} focuses on the general look-and-feel, this
- * example focuses purely on <b>keyed state</b>: a PTF that keeps a running sum per partition key.
- * The point of the example is to show that this accumulated state is durable. When the statement is
- * stopped and later resumed, Flink restores the state and the running sums continue exactly where
- * they left off. There is no data loss (rows produced while the statement was stopped are still
- * processed) and no double counting (the sums are not restarted from zero).
+ * <p>This example focuses on state <b>durability across the statement lifecycle</b>, using a PTF
+ * that keeps a running sum per partition key. The point is to show that this accumulated state is
+ * durable. When the statement is stopped and later resumed, Flink restores the state and the
+ * running sums continue exactly where they left off. There is no data loss (rows produced while the
+ * statement was stopped are still processed) and no double counting (the sums are not restarted
+ * from zero).
  *
  * <p>Along the way it demonstrates the Confluent lifecycle tooling that makes this observable:
  *
@@ -46,7 +46,10 @@ import static org.apache.flink.table.api.Expressions.row;
  *
  * <h2>Background: state in Process Table Functions</h2>
  *
- * <p>A few concepts from Apache Flink are worth keeping in mind while reading this example:
+ * <p>A few concepts from Apache Flink are worth keeping in mind while reading this example (see
+ * also the <a
+ * href="https://nightlies.apache.org/flink/flink-docs-stable/docs/dev/table/functions/ptfs/#state">Flink
+ * PTF state documentation</a>):
  *
  * <ul>
  *   <li><b>Only set-semantic PTFs can be stateful.</b> State is declared by adding one or more
@@ -66,17 +69,13 @@ import static org.apache.flink.table.api.Expressions.row;
  * <h2>Prerequisites</h2>
  *
  * <p>Unlike the read-only examples, this program <b>creates tables and submits a long-running
- * statement</b> in your environment. Point {@link #TARGET_CATALOG} and {@link #TARGET_DATABASE} at
- * a catalog (environment) and database (Kafka cluster) you have write access to. The program cleans
- * up after itself: it deletes the statement and drops the tables it created before returning.
+ * statement</b> in your environment, so it needs a current catalog (environment) and database
+ * (Kafka cluster) with write access. Configure them via {@code sql.current-catalog} / {@code
+ * sql.current-database} in {@code cloud.properties} (see {@code cloud.properties.template}). The
+ * program cleans up after itself: it deletes the statement and drops the tables it created before
+ * returning.
  */
-public class Example_12_StatefulProcessTableFunction {
-
-    // Fill this with an environment you have write access to
-    static final String TARGET_CATALOG = "";
-
-    // Fill this with a Kafka cluster you have write access to
-    static final String TARGET_DATABASE = "";
+public class Example_11_StatefulProcessTableFunction {
 
     // Names of the objects this example creates. They are dropped again at the end.
     static final String SOURCE_TABLE = "MyExampleSourceTable";
@@ -84,19 +83,23 @@ public class Example_12_StatefulProcessTableFunction {
 
     // A stable, human-readable statement name; so we can address the running pipeline. Statement
     // names must be unique within an environment/region for an organization.
-    static final String STATEMENT_NAME = "example-12-stateful-ptf";
+    static final String STATEMENT_NAME = "example-11-stateful-ptf";
 
     // All logic is defined in a main() method. It can run both in an IDE or CI/CD system.
     public static void main(String[] args) throws Exception {
         // Setup connection properties to Confluent Cloud
-        EnvironmentSettings settings = ConfluentSettings.fromResource("/cloud.properties");
+        EnvironmentSettings settings =
+                ConfluentSettings.newBuilderFromResource("/cloud.properties")
+                        .setApplicationName("stateful-process-table-function")
+                        .applyArgs(args)
+                        .build();
 
         // Initialize the session context to get started
         TableEnvironment env = TableEnvironment.create(settings);
 
-        // Set default catalog and database
-        env.useCatalog(TARGET_CATALOG);
-        env.useDatabase(TARGET_DATABASE);
+        // This example creates tables and submits a statement, so it writes to the current
+        // catalog/database from sql.current-catalog / sql.current-database (see
+        // cloud.properties.template).
 
         // Start from a clean slate so the example is deterministic and re-runnable.
         env.dropTable(SOURCE_TABLE);
@@ -151,7 +154,8 @@ public class Example_12_StatefulProcessTableFunction {
 
         // Get a handle to control the statement lifecycle.
         // The handle is the primary way to stop, resume, and delete
-        // a running statement from Table API code.
+        // a running statement from Table API code. If you only have a statement name (no handle or
+        // TableResult), ConfluentTools.stop/resume/deleteStatement(env, name) do the same.
         StatementHandle handle = ConfluentTools.getStatementHandle(result);
         System.out.println("Submitted statement: " + handle.getName());
 

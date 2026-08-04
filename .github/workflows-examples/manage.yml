@@ -66,11 +66,11 @@ jobs:
           APPLICATION_NAME: ${{ inputs.application-name }}
           STATEMENT_NAME: ${{ inputs.statement-name }}
         # --statement-name is added only when set (list then covers all statements).
-        # --action.await makes stop/resume/delete block until the target phase so the exit
-        # code reflects the outcome; list and describe ignore it.
+        # --action.await makes stop/resume/delete block until the target phase so the exit code
+        # reflects the outcome; list and describe ignore it.
         run: |
           args=("$ACTION" --application-name "$APPLICATION_NAME" --action.await)
           if [ -n "$STATEMENT_NAME" ]; then
             args+=(--statement-name "$STATEMENT_NAME")
           fi
-          java -cp target/flink-table-api-java-examples-1.0.jar io.confluent.flink.examples.table.Example_08_IntegrationAndDeployment "${args[@]}"
+          java -cp target/flink-table-api-java-examples-1.0.jar io.confluent.flink.examples.app.ReferenceApp_01_IntegrationAndDeployment "${args[@]}"
