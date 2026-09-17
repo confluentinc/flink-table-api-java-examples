@@ -34,14 +34,18 @@ if [ ! -f "$JAR" ]; then
     ./mvnw -q clean package -DskipTests
 fi
 
-# Examples live in two packages -- interactive/ (run inline and print) and app/ (deployable
-# statements) -- plus TableProgramTemplate at the top level. Resolve the fully-qualified name from
-# the jar so callers pass only the class name. The name is treated as a prefix, so "Example_02"
-# resolves to "Example_02_UnboundedTables". Inner classes (those with a '$') are ignored.
-# '|| true' keeps a no-match (unzip exits 11, grep -v exits 1) from tripping 'set -e' here, so the
-# empty-result check below can report it instead of the script aborting silently.
+# Examples live in interactive/ (run inline and print), app/ (deployable statements),
+# and advanced/ examples nested two packages deep and TableProgramTemplate at the top
+# level. Resolve the fully-qualified name from the jar so callers pass only the class
+# name. The name is treated as a prefix, so "Example_00" resolves to
+# "Example_00_HelloWorld".Note: some numbers repeat across packages (e.g.
+# Example_01/Example_02 exist in both interactive/ and advanced/), so an ambiguous
+# prefix requires the full class name. '|| true' keeps a no-match (unzip exits 11, grep -v
+# exits 1) from tripping 'set -e' here, so the empty-result check below can report it
+# instead of the script aborting silently.
 MATCHES=$(unzip -l "$JAR" "io/confluent/flink/examples/$EXAMPLE*.class" \
-        "io/confluent/flink/examples/*/$EXAMPLE*.class" 2>/dev/null \
+        "io/confluent/flink/examples/*/$EXAMPLE*.class" \
+        "io/confluent/flink/examples/*/*/$EXAMPLE*.class" 2>/dev/null \
     | awk '/\.class$/ {print $4}' \
     | grep -v '\$' \
     | sed 's#/#.#g; s#\.class$##' \

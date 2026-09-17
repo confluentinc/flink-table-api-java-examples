@@ -29,8 +29,10 @@ class Example_10_ProcessTableFunctionTest {
             newHarness() throws Exception {
         return ProcessTableFunctionTestHarness.ofClass(ClickInactivityMonitor.class)
                 .withTableArgument(
-                        INPUT, DataTypes.of("ROW<user_id STRING, click_time TIMESTAMP(3)>"))
-                .withPartitionBy(INPUT, "user_id")
+                        ProcessTableFunctionTestHarness.TableArgument.forName(INPUT)
+                                .type(DataTypes.of("ROW<user_id STRING, click_time TIMESTAMP(3)>"))
+                                .partitionBy("user_id")
+                                .build())
                 .withOnTimeColumn("click_time")
                 .withScalarArgument("timeoutSeconds", 30)
                 .build();
