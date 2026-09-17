@@ -141,17 +141,20 @@ public static void main(String[] args) {
 ## Developer Journey
 
 The examples in this repository follow the journey of taking a table program from a first
-experiment all the way to a production deployment. They are organized into two packages by theme:
+experiment all the way to a production deployment. They are organized into three packages by theme:
 
 - `io.confluent.flink.examples.interactive` — self-contained programs that run inline and print
   their results to the console, for learning the Table API (`Example_XX`).
 - `io.confluent.flink.examples.app` — deployable "apps" that submit long-running background
   statements and are managed via the CI/CD lifecycle actions (`ReferenceApp_XX`).
+- `io.confluent.flink.examples.advanced` — focused examples of specific, more advanced capabilities,
+  grouped by topic.
 
 | Stage | What you do | Where to look |
 |-------|-------------|---------------|
 | Get started | Configure a connection to Confluent Cloud and run a first program | `Example_00` - `Example_02`, [Getting Started](#getting-started) |
-| Build | Transform tables, build pipelines, work with data types, UDFs, and (stateful) process table functions | `Example_03` - `Example_11` |
+| Build | Transform tables, build pipelines, work with data types, UDFs, and (stateful) process table functions | `Example_03` - `Example_12` |
+| Go deeper | Explore advanced capabilities such as converting between changelogs and CDC feeds | `advanced/TOPIC/Example_*` |
 | Test locally | Run unit tests on mock data, without Confluent Cloud connectivity | `src/test/java/`, [Testing Table Programs](#testing-table-programs) |
 | Test on Confluent Cloud | Run integration tests against the real service | `ReferenceApp_01_IntegrationAndDeploymentIT`, [Testing Table Programs](#testing-table-programs) |
 | Deploy | Submit statements with deterministic names from a CI/CD pipeline | `ReferenceApp_01_IntegrationAndDeployment`, `ReferenceApp_02_ProcessTableFunction`, [CI/CD with GitHub Actions](#cicd-integration) |
@@ -1244,6 +1247,66 @@ ConfluentTools.stopStatement(env, "table-api-2024-03-21-150457-36e0dbb2e366-sql"
 ConfluentTools.deleteStatement(env, "table-api-2024-03-21-150457-36e0dbb2e366-sql");
 ```
 
+#### `ConfluentTools.createArtifact`
+
+Packages one or more user-defined function classes (and their transitive dependencies) into a
+single JAR, uploads it to Confluent Cloud as an artifact, and returns a `ConfluentArtifact`. This
+is useful for registering a **persistent** UDF: use `ConfluentArtifact.getReference()` (a
+`confluent-artifact://<id>/<version>` reference) in a `CREATE FUNCTION ... USING JAR` statement, and
+`ConfluentArtifact.getId()` (e.g. `cfa-...`) later with `ConfluentTools.deleteArtifact`.
+
+Requires artifact credentials: either a global API key/secret (`client.global-api-key` /
+`client.global-api-secret`) or a dedicated Artifact API key/secret (`client.artifact-api-key` /
+`client.artifact-api-secret`).
+
+```java
+// Package and upload a single UDF class into an artifact
+ConfluentArtifact artifact = ConfluentTools.createArtifact(env, "my-udfs", MyScalarFn.class);
+
+// Register a persistent function backed by the uploaded artifact
+env.executeSql(
+    "CREATE FUNCTION my_fn AS '" + MyScalarFn.class.getName() + "' "
+        + "USING JAR '" + artifact.getReference() + "'");
+
+// ... use my_fn in your statements ...
+
+// Clean up when the function is no longer needed
+env.dropFunction("my_fn");
+ConfluentTools.deleteArtifact(env, artifact.getId());
+```
+
+Multiple UDF classes can be bundled into a single artifact; the returned reference backs all of
+them, so shared dependencies are uploaded only once:
+
+```java
+// Bundle several UDF classes into one artifact
+ConfluentArtifact artifact =
+    ConfluentTools.createArtifact(env, "my-udfs", MyScalarFn.class, MyOtherFn.class);
+
+// Register one function per class, all pointing at the same artifact reference
+env.executeSql(
+    "CREATE FUNCTION my_fn AS '" + MyScalarFn.class.getName() + "' "
+        + "USING JAR '" + artifact.getReference() + "'");
+env.executeSql(
+    "CREATE FUNCTION my_other_fn AS '" + MyOtherFn.class.getName() + "' "
+        + "USING JAR '" + artifact.getReference() + "'");
+```
+
+Artifact metadata can be customized with `ConfluentArtifactOptions` — a custom `description`, a
+`documentationLink`, and the artifact `defaultPath`. Any option left unset falls back to a default: a
+generated description, no documentation link, and a default path derived from the provided classes
+(the single class's name, or `default` when multiple classes are bundled).
+
+```java
+ConfluentArtifact artifact = ConfluentTools.createArtifact(env, "my-udfs",
+    ConfluentArtifactOptions.newBuilder()
+        .description("Email helper functions")
+        .documentationLink("https://docs.example.com/udfs")
+        .defaultPath(MyScalarFn.class.getName())
+        .build(),
+    MyScalarFn.class);
+```
+
 #### `ConfluentTools.deleteArtifact`
 
 Deletes a UDF artifact from Confluent Cloud by its id (e.g. `cfa-...`). This is useful to
@@ -1425,6 +1488,8 @@ Table.map(...)
 Table.explain()
 Table.printExplain()
 Table.execute()
+Table.fromChangelog(...)
+Table.toChangelog(...)
 
 // TablePipeline
 TablePipeline.explain()
